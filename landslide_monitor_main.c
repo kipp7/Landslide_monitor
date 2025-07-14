@@ -752,7 +752,7 @@ static void DisplayTask(void)
                         // 只在风险等级变化时输出日志
                         static int last_risk_level = -1;
                         if (assessment.level != last_risk_level) {
-                            printf("🚨 风险等级变化: %d -> %d\n", last_risk_level, assessment.level);
+                            printf(" 风险等级变化: %d -> %d\n", last_risk_level, assessment.level);
                             last_risk_level = assessment.level;
                         }
                         break;
