@@ -18,7 +18,7 @@ static_library("landslide_monitor_example") {
     "src/output_devices.c",
     "src/lcd_display.c",
     "src/lcd.c",  # 智能家居的稳定LCD驱动
-    "src/lcd_font.c",  # LCD字体库
+    # "src/lcd_font.c",  # LCD字体库 - 字体数据在头文件中定义，不需要单独的.c文件
     "src/iot_cloud.c",  # 华为云IoT功能
     "src/data_storage.c",  # Flash数据存储功能
   ]
