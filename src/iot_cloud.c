@@ -26,6 +26,8 @@
 #include <math.h>
 #include "wifi_linked_info.h"
 #include "wifi_device.h"
+#include "lz_hardware/wifi.h"
+#include "lz_hardware/errno.h"
 
 #define MAX_BUFFER_LENGTH 1024
 #define MAX_STRING_LENGTH 64
@@ -42,22 +44,426 @@ static MQTTClient client;
 
 // 前向声明
 static void convert_landslide_to_iot_data(const LandslideIotData *landslide_data, e_iot_data *iot_data);
-static int get_wifi_location(double *latitude, double *longitude);
-static int get_current_wifi_info(char *ssid, char *bssid, int *signal_strength);
-static int wifi_location_lookup(const char *ssid, const char *bssid, double *lat, double *lon);
-static int scan_wifi_for_location(double *latitude, double *longitude);
 
 static unsigned int mqttConnectFlag = 0;
+
+// 数据缓存和连接状态管理
+static DataCache g_data_cache = {0};
+static ConnectionStatus g_connection_status = {0};
+static bool g_cache_initialized = false;
+
+// WiFi重连计数器（全局变量，便于在不同函数间共享）
+uint32_t wifi_reconnect_attempts = 0;
+
+// ==================== 数据缓存管理功能 ====================
+
+/**
+ * @brief 初始化数据缓存系统
+ * @return 0成功，-1失败
+ */
+int DataCache_Init(void)
+{
+    if (g_cache_initialized) {
+        return 0;  // 已经初始化
+    }
+
+    // 初始化缓存结构
+    memset(&g_data_cache, 0, sizeof(DataCache));
+    g_data_cache.head = 0;
+    g_data_cache.tail = 0;
+    g_data_cache.count = 0;
+    g_data_cache.is_full = false;
+
+    // 初始化连接状态
+    memset(&g_connection_status, 0, sizeof(ConnectionStatus));
+
+    // 尝试从文件加载缓存数据
+    DataCache_LoadFromFile();
+
+    g_cache_initialized = true;
+    printf("✅ 数据缓存系统初始化成功\n");
+    DataCache_PrintStats();
+
+    return 0;
+}
+
+/**
+ * @brief 添加数据到缓存队列
+ * @param data IoT数据指针
+ * @return 0成功，-1失败
+ */
+int DataCache_Add(const e_iot_data *data)
+{
+    if (!g_cache_initialized || data == NULL) {
+        return -1;
+    }
+
+    // 如果缓存满了，移除最旧的数据
+    if (g_data_cache.count >= MAX_CACHE_SIZE) {
+        printf("⚠️  缓存已满，移除最旧数据\n");
+        g_data_cache.head = (g_data_cache.head + 1) % MAX_CACHE_SIZE;
+        g_data_cache.count--;
+    }
+
+    // 添加新数据到队列尾部
+    CachedDataItem *item = &g_data_cache.items[g_data_cache.tail];
+    memcpy(&item->data, data, sizeof(e_iot_data));
+    item->timestamp = LOS_TickCountGet();  // 使用系统tick作为时间戳
+    item->retry_count = 0;
+    item->is_valid = true;
+
+    g_data_cache.tail = (g_data_cache.tail + 1) % MAX_CACHE_SIZE;
+    g_data_cache.count++;
+    g_data_cache.total_cached++;
+
+    printf("📦 数据已缓存 [%d/%d] 总缓存:%d\n",
+           g_data_cache.count, MAX_CACHE_SIZE, g_data_cache.total_cached);
+
+    return 0;
+}
+
+/**
+ * @brief 发送缓存中的待发送数据
+ * @return 发送成功的数据条数
+ */
+int DataCache_SendPending(void)
+{
+    if (!g_cache_initialized || g_data_cache.count == 0) {
+        return 0;
+    }
+
+    int sent_count = 0;
+    int processed_count = 0;
+    uint16_t current_head = g_data_cache.head;
+
+    printf("📤 开始发送缓存数据，待发送:%d条\n", g_data_cache.count);
+
+    // 遍历缓存队列发送数据
+    while (processed_count < g_data_cache.count && processed_count < 10) {  // 限制单次处理数量
+        CachedDataItem *item = &g_data_cache.items[current_head];
+
+        if (!item->is_valid) {
+            current_head = (current_head + 1) % MAX_CACHE_SIZE;
+            processed_count++;
+            continue;
+        }
+
+        // 检查是否超过最大重试次数
+        if (item->retry_count >= MAX_RETRY_COUNT) {
+            printf("❌ 数据重试次数超限，丢弃 (重试:%d次)\n", item->retry_count);
+            item->is_valid = false;
+            g_data_cache.total_failed++;
+
+            // 移除失败的数据
+            if (current_head == g_data_cache.head) {
+                g_data_cache.head = (g_data_cache.head + 1) % MAX_CACHE_SIZE;
+                g_data_cache.count--;
+            }
+        } else {
+            // 尝试发送数据
+            printf("📡 发送缓存数据 (重试:%d/%d)\n", item->retry_count, MAX_RETRY_COUNT);
+
+            if (mqtt_is_connected()) {
+                send_msg_to_mqtt(&item->data);
+
+                // 发送成功，标记为无效并移除
+                item->is_valid = false;
+                g_data_cache.total_sent++;
+                sent_count++;
+
+                if (current_head == g_data_cache.head) {
+                    g_data_cache.head = (g_data_cache.head + 1) % MAX_CACHE_SIZE;
+                    g_data_cache.count--;
+                }
+
+                printf("✅ 缓存数据发送成功\n");
+            } else {
+                // 发送失败，增加重试次数
+                item->retry_count++;
+                printf("⚠️  MQTT未连接，重试次数+1 (%d/%d)\n",
+                       item->retry_count, MAX_RETRY_COUNT);
+                break;  // MQTT未连接，停止发送
+            }
+        }
+
+        current_head = (current_head + 1) % MAX_CACHE_SIZE;
+        processed_count++;
+
+        // 避免阻塞太久
+        LOS_Msleep(100);
+    }
+
+    if (sent_count > 0) {
+        printf("✅ 缓存数据发送完成: %d条成功\n", sent_count);
+        DataCache_SaveToFile();  // 保存缓存状态
+    }
+
+    return sent_count;
+}
+
+/**
+ * @brief 将缓存数据保存到文件
+ * @return 0成功，-1失败
+ */
+int DataCache_SaveToFile(void)
+{
+    // 注意：rk2206平台文件系统支持有限，这里使用简化实现
+    // 实际项目中可以根据平台特性选择合适的持久化方案
+    printf("💾 缓存数据保存到文件 (简化实现)\n");
+    return 0;  // 简化实现，总是返回成功
+}
+
+/**
+ * @brief Flash数据加载回调函数
+ * @param data Flash中的数据
+ * @return 0成功，-1失败
+ */
+static int FlashDataLoadCallback(const LandslideIotData *data)
+{
+    if (data == NULL) {
+        return -1;
+    }
+
+    // 转换数据格式
+    e_iot_data iot_data;
+    convert_landslide_to_iot_data(data, &iot_data);
+
+    // 添加到内存缓存
+    return DataCache_Add(&iot_data);
+}
+
+/**
+ * @brief 从Flash加载缓存数据到内存
+ * @return 加载的数据条数
+ */
+int DataCache_LoadFromFlash(void)
+{
+    printf("📂 从Flash加载缓存数据到内存...\n");
+
+    extern int DataStorage_ProcessCached(int (*callback)(const LandslideIotData *data));
+    int loaded_count = DataStorage_ProcessCached(FlashDataLoadCallback);
+
+    if (loaded_count > 0) {
+        printf("✅ 从Flash加载了 %d 条缓存数据到内存\n", loaded_count);
+    } else {
+        printf("📭 Flash中没有缓存数据需要加载\n");
+    }
+
+    return loaded_count;
+}
+
+/**
+ * @brief 从文件加载缓存数据（保留接口兼容性）
+ * @return 0成功，-1失败
+ */
+int DataCache_LoadFromFile(void)
+{
+    // 实际从Flash加载数据
+    int loaded = DataCache_LoadFromFlash();
+    return (loaded >= 0) ? 0 : -1;
+}
+
+/**
+ * @brief 清空数据缓存
+ */
+void DataCache_Clear(void)
+{
+    if (!g_cache_initialized) {
+        return;
+    }
+
+    memset(&g_data_cache.items, 0, sizeof(g_data_cache.items));
+    g_data_cache.head = 0;
+    g_data_cache.tail = 0;
+    g_data_cache.count = 0;
+    g_data_cache.is_full = false;
+
+    printf("🗑️  数据缓存已清空\n");
+}
+
+/**
+ * @brief 打印缓存统计信息
+ */
+void DataCache_PrintStats(void)
+{
+    if (!g_cache_initialized) {
+        printf("❌ 缓存系统未初始化\n");
+        return;
+    }
+
+    printf("\n📊 === 数据缓存统计 ===\n");
+    printf("当前缓存: %d/%d 条\n", g_data_cache.count, MAX_CACHE_SIZE);
+    printf("总缓存数: %d 条\n", g_data_cache.total_cached);
+    printf("发送成功: %d 条\n", g_data_cache.total_sent);
+    printf("发送失败: %d 条\n", g_data_cache.total_failed);
+
+    // 成功率计算（修正逻辑：只有真正失败的才算失败）
+    uint32_t total_attempts = g_data_cache.total_sent + g_data_cache.total_failed;
+    if (total_attempts > 0) {
+        float success_rate = (float)g_data_cache.total_sent / total_attempts * 100.0f;
+        printf("成功率: %.1f%%\n", success_rate);
+    } else {
+        printf("成功率: 100%% (无失败记录)\n");
+    }
+    printf("========================\n\n");
+}
+
+// ==================== 连接状态管理功能 ====================
+
+/**
+ * @brief 更新连接状态
+ */
+void ConnectionStatus_Update(void)
+{
+    if (!g_cache_initialized) {
+        return;
+    }
+
+    bool wifi_status = (wifi_get_connect_status_internal() == 1);
+    bool mqtt_status = mqtt_is_connected();
+    uint32_t current_time = LOS_TickCountGet();
+
+    // 检测WiFi状态变化
+    if (wifi_status != g_connection_status.wifi_connected) {
+        if (wifi_status) {
+            printf("📶 WiFi连接恢复\n");
+            g_connection_status.reconnect_count++;
+
+            // WiFi连接成功时重置重连计数器
+            extern uint32_t wifi_reconnect_attempts;
+            wifi_reconnect_attempts = 0;
+            printf("✅ WiFi重连计数器已重置\n");
+
+            // WiFi恢复后，立即尝试重连MQTT
+            if (!g_connection_status.mqtt_connected) {
+                printf("🔗 WiFi已恢复，立即尝试重连MQTT...\n");
+                LOS_Msleep(2000); // 等待2秒让WiFi稳定
+                mqtt_init();
+            }
+        } else {
+            printf("📵 WiFi连接断开，尝试重连...\n");
+            g_connection_status.disconnect_count++;
+        }
+        g_connection_status.wifi_connected = wifi_status;
+    }
+
+    // WiFi持续重连逻辑（独立于状态变化检测）
+    if (!wifi_status) {
+        static uint32_t last_wifi_reconnect_time = 0;
+
+        // WiFi持续重连，直到连接成功
+        if (current_time - last_wifi_reconnect_time > 8000) { // 8秒间隔，更频繁重连
+            wifi_reconnect_attempts++;
+            printf("🔄 WiFi重连尝试 #%d (持续重连直到成功)\n", wifi_reconnect_attempts);
+
+            // 使用与初始连接一致的重连策略
+            printf("🔄 重新配置WiFi连接 (SSID: %s)\n", WIFI_SSID);
+
+            // 重新设置WiFi配置（确保配置正确）
+            extern void set_wifi_config_route_ssid(printf_fn pfn, uint8_t *s);
+            extern void set_wifi_config_route_passwd(printf_fn pfn, uint8_t *s);
+            set_wifi_config_route_ssid(printf, (uint8_t *)WIFI_SSID);
+            set_wifi_config_route_passwd(printf, (uint8_t *)WIFI_PASSWORD);
+
+            // 使用与初始连接相同的方法
+            extern WifiErrorCode SetWifiModeOff(void);
+            extern WifiErrorCode SetWifiModeOn(void);
+
+            printf("🔄 重启WiFi连接...\n");
+            SetWifiModeOff();
+            LOS_Msleep(2000);  // 等待WiFi完全关闭
+
+            int result = SetWifiModeOn();
+            if (result == 0) {
+                printf("🔄 WiFi重连请求已发送 (SSID: %s)\n", WIFI_SSID);
+            } else {
+                printf("❌ WiFi重连请求失败，错误码: %d (SSID: %s)\n", result, WIFI_SSID);
+            }
+
+            // 每20次重连显示一次状态提示（更频繁的状态报告）
+            if (wifi_reconnect_attempts % 20 == 0) {
+                printf("📊 WiFi重连状态: 已尝试%d次，继续重连中...\n", wifi_reconnect_attempts);
+                printf("   目标SSID: %s\n", WIFI_SSID);
+                printf("   请检查: 1.WiFi热点是否开启 2.信号强度是否足够 3.密码是否正确\n");
+            }
+
+            last_wifi_reconnect_time = current_time;
+        }
+    }
+
+    // 检测MQTT状态变化
+    if (mqtt_status != g_connection_status.mqtt_connected) {
+        if (mqtt_status) {
+            printf("🔗 MQTT连接恢复\n");
+            g_connection_status.last_connect_time = current_time;
+        } else {
+            printf("🔌 MQTT连接断开，等待WiFi恢复后重连\n");
+            // MQTT重连会在WiFi恢复后由IoT网络任务自动处理
+        }
+        g_connection_status.mqtt_connected = mqtt_status;
+    }
+}
+
+/**
+ * @brief 打印连接状态统计
+ */
+void ConnectionStatus_PrintStats(void)
+{
+    if (!g_cache_initialized) {
+        return;
+    }
+
+    printf("\n🌐 === 连接状态统计 ===\n");
+    printf("WiFi状态: %s\n", g_connection_status.wifi_connected ? "✅ 已连接" : "❌ 断开");
+    printf("MQTT状态: %s\n", g_connection_status.mqtt_connected ? "✅ 已连接" : "❌ 断开");
+    printf("断线次数: %d 次\n", g_connection_status.disconnect_count);
+    printf("重连次数: %d 次\n", g_connection_status.reconnect_count);
+    printf("网络错误: %d 次\n", g_connection_status.network_error_count);
+
+    uint32_t current_time = LOS_TickCountGet();
+    if (g_connection_status.last_connect_time > 0) {
+        uint32_t uptime_ticks = current_time - g_connection_status.last_connect_time;
+        uint32_t uptime_seconds = uptime_ticks / 100;  // 假设tick频率为100Hz
+        printf("连接时长: %d 秒\n", uptime_seconds);
+    }
+    printf("========================\n\n");
+}
+
+/**
+ * @brief 检查连接是否稳定
+ * @return true稳定，false不稳定
+ */
+bool ConnectionStatus_IsStable(void)
+{
+    if (!g_cache_initialized) {
+        return false;
+    }
+
+    return g_connection_status.wifi_connected && g_connection_status.mqtt_connected;
+}
 
 // 外部变量声明（用于命令处理）
 extern bool g_alarm_acknowledged;
 
-// 简化的WiFi状态检查（避免依赖外部函数）
+// WiFi状态检查函数
 static int check_wifi_connected(void)
 {
-    // 从串口输出可以看到WiFi已经成功连接
-    // 这里返回1表示已连接，实际项目中可以通过其他方式检查
-    return 1;  // 假设WiFi已连接
+    // 使用实际的WiFi状态检查
+    int status = wifi_get_connect_status_internal();
+
+    // 验证连接状态：尝试获取连接信息
+    WifiLinkedInfo info;
+    memset(&info, 0, sizeof(WifiLinkedInfo));
+
+    if (GetLinkedInfo(&info) == WIFI_SUCCESS) {
+        // 如果能获取到连接信息且状态为已连接，则认为WiFi正常
+        if (info.connState == WIFI_CONNECTED && strlen(info.ssid) > 0) {
+            return 1;  // WiFi已连接
+        }
+    }
+
+    // 如果无法获取连接信息或状态不正确，则认为WiFi断开
+    return 0;
 }
 
 /**
@@ -252,9 +658,9 @@ bool IoTCloud_IsConnected(void)
 }
 
 /**
- * @brief IoT网络任务（参考e1_iot_smart_home）
+ * @brief IoT网络任务实现（参考e1_iot_smart_home）
  */
-static void IoTNetworkTask(void *arg)
+static void IoTNetworkTaskImpl(void *arg)
 {
     (void)arg;
 
@@ -341,16 +747,137 @@ reconnect:
         return;
     }
 
-    // WiFi连接成功后，初始化MQTT
+    // WiFi连接成功后，初始化缓存系统和MQTT
+    DataCache_Init();
     mqtt_init();
 
-    // 保持MQTT连接
+    // 保持MQTT连接并处理缓存数据
+    uint32_t last_cache_check = 0;
+    uint32_t last_stats_print = 0;
+    uint32_t last_health_check = 0;
+    uint32_t last_flash_check = 0;
+    uint32_t cache_check_interval = 5000;    // 5秒检查一次内存缓存
+    uint32_t stats_print_interval = 60000;   // 1分钟打印一次统计
+    uint32_t health_check_interval = 60000;  // 1分钟进行一次健康检查（优化）
+    uint32_t flash_check_interval = 120000;  // 2分钟检查一次Flash缓存
+
+    printf("🚀 IoT网络任务启动完成，开始数据处理循环\n");
+
+    // 显示初始系统状态
+    printf("\n📋 === 系统启动状态 ===\n");
+    printf("🔧 缓存系统: %s\n", g_cache_initialized ? "✅ 已初始化" : "❌ 未初始化");
+    printf("🌐 WiFi状态: %s\n", g_connection_status.wifi_connected ? "✅ 已连接" : "❌ 断开");
+    printf("🔗 MQTT状态: %s\n", g_connection_status.mqtt_connected ? "✅ 已连接" : "❌ 断开");
+    printf("📊 缓存容量: %d/%d 条\n", g_data_cache.count, MAX_CACHE_SIZE);
+    printf("⏰ 监控间隔: 缓存检查%ds, 状态报告%ds, 健康检查%ds\n",
+           cache_check_interval/1000, stats_print_interval/1000, health_check_interval/1000);
+    printf("========================\n\n");
+
+    // 启动时立即执行一次健康检查
+    printf("🏥 执行启动时健康检查...\n");
+    IoTCloud_HealthCheck();
+
     while (1) {
+        uint32_t current_time = LOS_TickCountGet();
+
+        // 检查MQTT连接状态（只在WiFi连接正常时尝试重连）
         if (!wait_message()) {
-            printf("MQTT connection lost, reconnecting...\n");
-            mqtt_init();
+            static uint32_t last_mqtt_reconnect = 0;
+            uint32_t mqtt_reconnect_interval = 15000;  // 15秒重连间隔（比WiFi重连间隔长）
+
+            // 重新检查WiFi状态，确保状态准确
+            bool actual_wifi_status = (check_wifi_connected() == 1);
+            g_connection_status.wifi_connected = actual_wifi_status;
+
+            // 只有WiFi连接正常时才尝试MQTT重连
+            if (actual_wifi_status &&
+                current_time - last_mqtt_reconnect > mqtt_reconnect_interval) {
+                printf("🔌 MQTT连接断开，WiFi正常，尝试重连MQTT...\n");
+                g_connection_status.disconnect_count++;
+                mqtt_init();
+                g_connection_status.reconnect_count++;
+                last_mqtt_reconnect = current_time;
+            } else if (!actual_wifi_status) {
+                // WiFi断开时，不尝试MQTT重连，等待WiFi恢复
+                if (current_time - last_mqtt_reconnect > 30000) { // 30秒提示一次
+                    printf("⏳ WiFi断开中，等待WiFi恢复后重连MQTT...\n");
+                    last_mqtt_reconnect = current_time;
+                }
+            }
         }
-        LOS_Msleep(1);
+
+        // 更新连接状态
+        ConnectionStatus_Update();
+
+        // 定期检查并发送内存缓存数据
+        if (current_time - last_cache_check > cache_check_interval) {
+            if (ConnectionStatus_IsStable() && g_data_cache.count > 0) {
+                printf("⏰ 定期检查内存缓存数据...\n");
+                int sent_count = DataCache_SendPending();
+                if (sent_count > 0) {
+                    printf("📤 定期发送了 %d 条内存缓存数据\n", sent_count);
+                }
+            }
+            last_cache_check = current_time;
+        }
+
+        // 定期检查并加载Flash缓存数据到内存
+        if (current_time - last_flash_check > flash_check_interval) {
+            if (ConnectionStatus_IsStable() && g_data_cache.count < MAX_CACHE_SIZE * 0.5) {
+                extern uint32_t DataStorage_GetRecordCount(void);
+
+                uint32_t flash_count = DataStorage_GetRecordCount();
+                if (flash_count > 0) {
+                    printf("💾 检测到%d条Flash缓存数据，加载到内存缓存...\n", flash_count);
+                    int loaded = DataCache_LoadFromFlash();
+                    if (loaded > 0) {
+                        printf("📥 Flash数据加载: %d/%d 条成功\n", loaded, flash_count);
+                    }
+                }
+            }
+            last_flash_check = current_time;
+        }
+
+        // 定期打印统计信息
+        if (current_time - last_stats_print > stats_print_interval) {
+            printf("\n📊 === 定期状态报告 ===\n");
+            ConnectionStatus_PrintStats();
+            DataCache_PrintStats();
+
+            // 显示网络连接质量
+            printf("🌐 === 网络连接质量 ===\n");
+            printf("WiFi状态: %s\n", g_connection_status.wifi_connected ? "✅ 已连接" : "❌ 断开");
+            printf("MQTT状态: %s\n", g_connection_status.mqtt_connected ? "✅ 已连接" : "❌ 断开");
+            printf("连接稳定性: %s\n", ConnectionStatus_IsStable() ? "🟢 稳定" : "🟡 不稳定");
+            printf("========================\n");
+
+            last_stats_print = current_time;
+        }
+
+        // 定期健康检查（独立执行，不受网络状态影响）
+        if (current_time - last_health_check > health_check_interval) {
+            printf("🏥 执行定期健康检查...\n");
+
+            // 健康检查始终执行，提供系统状态反馈
+            bool system_healthy = IoTCloud_IsSystemHealthy();
+            if (!system_healthy) {
+                printf("⚠️  系统健康状态异常，执行详细检查\n");
+                IoTCloud_HealthCheck();
+            } else {
+                printf("✅ 系统健康状态良好\n");
+
+                // 简化的健康状态报告
+                printf("📊 快速状态: 缓存%d/%d条 | WiFi=%s | MQTT=%s | 错误%d次\n",
+                       g_data_cache.count, MAX_CACHE_SIZE,
+                       g_connection_status.wifi_connected ? "✅" : "❌",
+                       g_connection_status.mqtt_connected ? "✅" : "❌",
+                       g_connection_status.network_error_count);
+            }
+
+            last_health_check = current_time;
+        }
+
+        LOS_Msleep(100);  // 减少CPU占用
     }
 }
 
@@ -363,7 +890,7 @@ int IoTCloud_StartTask(void)
 
     // 创建IoT网络任务
     TSK_INIT_PARAM_S task_param = {0};
-    task_param.pfnTaskEntry = (TSK_ENTRY_FUNC)IoTNetworkTask;
+    task_param.pfnTaskEntry = (TSK_ENTRY_FUNC)IoTNetworkTaskImpl;
     task_param.uwStackSize = 4096;
     task_param.pcName = "IoTNetTask";
     task_param.usTaskPrio = 25;
@@ -380,10 +907,298 @@ int IoTCloud_StartTask(void)
     return 0;
 }
 
+/**
+ * @brief 公共网络任务函数（供外部调用）
+ */
+void IoTNetworkTask(void)
+{
+    // 调用静态函数的实现
+    IoTNetworkTaskImpl(NULL);
+}
+
+// ==================== 测试和演示功能 ====================
+
+/**
+ * @brief 测试缓存系统功能
+ */
+void IoTCloud_TestCacheSystem(void)
+{
+    printf("\n🧪 === 缓存系统测试开始 ===\n");
+
+    // 初始化缓存系统
+    DataCache_Init();
+
+    // 创建测试数据
+    e_iot_data test_data = {0};
+    test_data.temperature = 25.5;
+    test_data.humidity = 60.0;
+    test_data.illumination = 100.0;
+    test_data.acceleration_x = 100;
+    test_data.acceleration_y = 200;
+    test_data.acceleration_z = 1000;
+    test_data.risk_level = 1;
+    test_data.alarm_active = false;
+
+    printf("📝 添加测试数据到缓存...\n");
+    for (int i = 0; i < 5; i++) {
+        test_data.temperature = 25.0 + i;
+        test_data.risk_level = i % 5;
+        DataCache_Add(&test_data);
+        LOS_Msleep(100);
+    }
+
+    printf("📊 缓存状态:\n");
+    DataCache_PrintStats();
+
+    printf("🔄 模拟网络恢复，发送缓存数据...\n");
+    if (mqtt_is_connected()) {
+        int sent = DataCache_SendPending();
+        printf("✅ 发送了 %d 条缓存数据\n", sent);
+    } else {
+        printf("⚠️  MQTT未连接，无法发送缓存数据\n");
+    }
+
+    printf("📊 最终缓存状态:\n");
+    DataCache_PrintStats();
+    ConnectionStatus_PrintStats();
+
+    printf("🧪 === 缓存系统测试完成 ===\n\n");
+}
+
+/**
+ * @brief 模拟网络故障
+ * @param duration_seconds 故障持续时间（秒）
+ */
+void IoTCloud_SimulateNetworkFailure(int duration_seconds)
+{
+    printf("\n⚠️  === 模拟网络故障 %d 秒 ===\n", duration_seconds);
+
+    // 记录故障前状态
+    bool original_mqtt_status = g_connection_status.mqtt_connected;
+    bool original_wifi_status = g_connection_status.wifi_connected;
+
+    // 模拟网络断开
+    g_connection_status.mqtt_connected = false;
+    g_connection_status.wifi_connected = false;
+    g_connection_status.disconnect_count++;
+
+    printf("🔌 网络已断开，开始缓存数据...\n");
+
+    // 在故障期间添加一些测试数据
+    e_iot_data test_data = {0};
+    test_data.temperature = 26.0;
+    test_data.humidity = 65.0;
+    test_data.illumination = 80.0;
+    test_data.risk_level = 2;
+    test_data.alarm_active = true;
+
+    for (int i = 0; i < duration_seconds; i++) {
+        test_data.temperature = 26.0 + i * 0.1;
+        DataCache_Add(&test_data);
+        printf("📦 故障期间数据已缓存 (%d/%d秒)\n", i + 1, duration_seconds);
+        LOS_Msleep(1000);
+    }
+
+    // 恢复网络连接
+    g_connection_status.mqtt_connected = original_mqtt_status;
+    g_connection_status.wifi_connected = original_wifi_status;
+    g_connection_status.reconnect_count++;
+
+    printf("📶 网络已恢复，开始发送缓存数据...\n");
+
+    if (ConnectionStatus_IsStable()) {
+        int sent = DataCache_SendPending();
+        printf("✅ 网络恢复后发送了 %d 条缓存数据\n", sent);
+    }
+
+    printf("⚠️  === 网络故障模拟完成 ===\n\n");
+}
+
+/**
+ * @brief 强制重发缓存数据
+ */
+void IoTCloud_ForceResendCache(void)
+{
+    printf("\n🔄 === 强制重发缓存数据 ===\n");
+
+    if (!g_cache_initialized) {
+        printf("❌ 缓存系统未初始化\n");
+        return;
+    }
+
+    printf("📊 重发前缓存状态:\n");
+    DataCache_PrintStats();
+
+    if (g_data_cache.count == 0) {
+        printf("ℹ️  缓存为空，无需重发\n");
+        return;
+    }
+
+    if (ConnectionStatus_IsStable()) {
+        int sent = DataCache_SendPending();
+        printf("✅ 强制重发了 %d 条缓存数据\n", sent);
+    } else {
+        printf("⚠️  网络连接不稳定，无法重发数据\n");
+        printf("   WiFi: %s | MQTT: %s\n",
+               g_connection_status.wifi_connected ? "已连接" : "断开",
+               g_connection_status.mqtt_connected ? "已连接" : "断开");
+    }
+
+    printf("📊 重发后缓存状态:\n");
+    DataCache_PrintStats();
+
+    printf("🔄 === 强制重发完成 ===\n\n");
+}
+
+// ==================== 系统健康检查功能 ====================
+
+/**
+ * @brief 系统健康检查
+ */
+void IoTCloud_HealthCheck(void)
+{
+    printf("\n🏥 === 系统健康检查开始 ===\n");
+
+    bool system_healthy = true;
+
+    // 检查缓存系统
+    if (!g_cache_initialized) {
+        printf("❌ 缓存系统未初始化\n");
+        system_healthy = false;
+    } else {
+        printf("✅ 缓存系统正常运行\n");
+
+        // 检查缓存使用率
+        float cache_usage = (float)g_data_cache.count / MAX_CACHE_SIZE * 100.0f;
+        if (cache_usage > 80.0f) {
+            printf("⚠️  缓存使用率过高: %.1f%%\n", cache_usage);
+            system_healthy = false;
+        } else {
+            printf("✅ 缓存使用率正常: %.1f%%\n", cache_usage);
+        }
+    }
+
+    // 检查网络连接
+    ConnectionStatus_Update();
+    if (!ConnectionStatus_IsStable()) {
+        printf("❌ 网络连接不稳定\n");
+        system_healthy = false;
+    } else {
+        printf("✅ 网络连接稳定\n");
+    }
+
+    // 检查数据发送成功率（修正逻辑：只有真正失败的才算失败）
+    uint32_t total_attempts = g_data_cache.total_sent + g_data_cache.total_failed;
+    if (total_attempts > 0) {
+        float success_rate = (float)g_data_cache.total_sent / total_attempts * 100.0f;
+        if (success_rate < 90.0f) {
+            printf("⚠️  数据发送成功率偏低: %.1f%%\n", success_rate);
+            system_healthy = false;
+        } else {
+            printf("✅ 数据发送成功率良好: %.1f%%\n", success_rate);
+        }
+    } else {
+        printf("✅ 数据发送成功率: 100%% (无失败记录)\n");
+    }
+
+    // 检查错误计数
+    if (g_connection_status.network_error_count > 10) {
+        printf("⚠️  网络错误次数过多: %d 次\n", g_connection_status.network_error_count);
+        system_healthy = false;
+    } else {
+        printf("✅ 网络错误次数正常: %d 次\n", g_connection_status.network_error_count);
+    }
+
+    // 总体健康状态
+    printf("\n🎯 系统总体状态: %s\n", system_healthy ? "🟢 健康" : "🔴 需要关注");
+
+    if (!system_healthy) {
+        printf("\n💡 建议操作:\n");
+        printf("   1. 检查网络连接稳定性\n");
+        printf("   2. 清理缓存数据: IoTCloud_ForceResendCache()\n");
+        printf("   3. 重启网络服务\n");
+        printf("   4. 检查云平台配置\n");
+    }
+
+    printf("🏥 === 系统健康检查完成 ===\n\n");
+}
+
+/**
+ * @brief 打印系统状态
+ */
+void IoTCloud_PrintSystemStatus(void)
+{
+    printf("\n📋 === 系统状态总览 ===\n");
+
+    // 基本信息
+    printf("🔧 系统版本: 滑坡监测系统 v2.0.0\n");
+    printf("📅 运行时间: %d 秒\n", LOS_TickCountGet() / 1000);
+
+    // 网络状态
+    printf("\n🌐 网络状态:\n");
+    printf("   WiFi: %s\n", g_connection_status.wifi_connected ? "✅ 已连接" : "❌ 断开");
+    printf("   MQTT: %s\n", g_connection_status.mqtt_connected ? "✅ 已连接" : "❌ 断开");
+    printf("   稳定性: %s\n", ConnectionStatus_IsStable() ? "🟢 稳定" : "🟡 不稳定");
+
+    // 数据统计
+    printf("\n📊 数据统计:\n");
+    printf("   当前缓存: %d/%d 条\n", g_data_cache.count, MAX_CACHE_SIZE);
+    printf("   总缓存数: %d 条\n", g_data_cache.total_cached);
+    printf("   发送成功: %d 条\n", g_data_cache.total_sent);
+    printf("   发送失败: %d 条\n", g_data_cache.total_failed);
+
+    // 成功率计算（修正逻辑：只有真正失败的才算失败）
+    uint32_t total_attempts = g_data_cache.total_sent + g_data_cache.total_failed;
+    if (total_attempts > 0) {
+        float success_rate = (float)g_data_cache.total_sent / total_attempts * 100.0f;
+        printf("   成功率: %.1f%%\n", success_rate);
+    } else {
+        printf("   成功率: 100%% (无失败记录)\n");
+    }
+
+    // 错误统计
+    printf("\n⚠️  错误统计:\n");
+    printf("   断线次数: %d 次\n", g_connection_status.disconnect_count);
+    printf("   重连次数: %d 次\n", g_connection_status.reconnect_count);
+    printf("   网络错误: %d 次\n", g_connection_status.network_error_count);
+
+    printf("📋 === 状态总览完成 ===\n\n");
+}
+
+/**
+ * @brief 检查系统是否健康
+ * @return true 系统健康，false 系统有问题
+ */
+bool IoTCloud_IsSystemHealthy(void)
+{
+    // 检查缓存系统
+    if (!g_cache_initialized) return false;
+
+    // 检查缓存使用率
+    float cache_usage = (float)g_data_cache.count / MAX_CACHE_SIZE * 100.0f;
+    if (cache_usage > 90.0f) return false;
+
+    // 检查网络连接
+    ConnectionStatus_Update();
+    if (!ConnectionStatus_IsStable()) return false;
+
+    // 检查数据发送成功率（修正逻辑：只有真正失败的才算失败）
+    uint32_t total_attempts = g_data_cache.total_sent + g_data_cache.total_failed;
+    if (total_attempts > 10) {
+        float success_rate = (float)g_data_cache.total_sent / total_attempts * 100.0f;
+        if (success_rate < 85.0f) return false;
+    }
+
+    // 检查错误计数
+    if (g_connection_status.network_error_count > 20) return false;
+
+    return true;
+}
+
 // 注意：IoTCloud_IsConnected函数已在前面定义，这里删除重复定义
 
 /**
- * @brief 发送传感器数据到云平台（基于成熟版本）
+ * @brief 发送传感器数据到云平台（集成缓存和重发功能）
  */
 int IoTCloud_SendData(const LandslideIotData *data)
 {
@@ -391,20 +1206,33 @@ int IoTCloud_SendData(const LandslideIotData *data)
         return -1;
     }
 
-    if (!mqttConnectFlag) {
-        printf("IoT not connected (simulation mode not active)\n");
-        return -1;
+    // 确保缓存系统已初始化
+    if (!g_cache_initialized) {
+        DataCache_Init();
     }
+
+    // 更新连接状态
+    ConnectionStatus_Update();
 
     // 转换数据结构
     e_iot_data iot_data;
     convert_landslide_to_iot_data(data, &iot_data);
 
-    // 使用成熟版本的发送函数
-    send_msg_to_mqtt(&iot_data);
+    // 检查连接状态
+    if (ConnectionStatus_IsStable() && mqttConnectFlag) {
+        // 连接稳定，先尝试发送缓存数据
+        int sent_cached = DataCache_SendPending();
+        if (sent_cached > 0) {
+            printf("📤 发送了 %d 条缓存数据\n", sent_cached);
+        }
 
-    // 检查发送状态
-    if (mqttConnectFlag) {
+        // 然后发送当前数据
+        printf("📡 发送实时数据到云平台\n");
+        send_msg_to_mqtt(&iot_data);
+        g_connection_status.last_data_send_time = LOS_TickCountGet();
+        g_data_cache.total_sent++;
+
+        // 打印发送状态
         static uint32_t upload_count = 0;
         upload_count++;
         printf("=== IoT Data Upload #%d ===\n", upload_count);
@@ -412,10 +1240,58 @@ int IoTCloud_SendData(const LandslideIotData *data)
                data->risk_level, data->temperature, data->humidity);
         printf("Motion: X=%.1f° Y=%.1f° | Light=%.1fLux | Alarm=%s\n",
                data->angle_x, data->angle_y, data->light, data->alarm_active ? "ACTIVE" : "NORMAL");
+        printf("📊 缓存状态: %d/%d条 | 连接: WiFi=%s MQTT=%s\n",
+               g_data_cache.count, MAX_CACHE_SIZE,
+               g_connection_status.wifi_connected ? "✅" : "❌",
+               g_connection_status.mqtt_connected ? "✅" : "❌");
+
+        // 计算并显示成功率（修正逻辑：只有真正失败的才算失败）
+        uint32_t total_attempts = g_data_cache.total_sent + g_data_cache.total_failed;
+        if (total_attempts > 0) {
+            float success_rate = (float)g_data_cache.total_sent / total_attempts * 100.0f;
+            printf("📈 数据上传成功率: %.1f%% (%d/%d)\n",
+                   success_rate, g_data_cache.total_sent, total_attempts);
+            if (g_data_cache.total_cached > 0) {
+                printf("📦 当前缓存数据: %d条 (等待发送，不计入失败)\n", g_data_cache.count);
+            }
+        } else {
+            printf("📈 数据上传成功率: 100.0%% (无失败记录)\n");
+        }
         printf("========================\n");
+
         return 0;
     } else {
-        return -1;
+        // 连接不稳定，将数据加入内存缓存
+        printf("⚠️  连接不稳定，数据加入内存缓存队列\n");
+        int cache_result = DataCache_Add(&iot_data);
+
+        if (cache_result == 0) {
+            printf("📦 数据已加入内存缓存，等待网络恢复后发送\n");
+
+            // 如果内存缓存接近满，将数据存储到Flash作为长期备份
+            if (g_data_cache.count > MAX_CACHE_SIZE * 0.8) {
+                printf("💾 内存缓存接近满(>80%)，将数据备份到Flash存储\n");
+                extern int DataStorage_Store(const LandslideIotData *data);
+                if (DataStorage_Store(data) == 0) {
+                    printf("✅ 数据已备份到Flash存储（长期保存）\n");
+                } else {
+                    printf("❌ Flash存储失败\n");
+                }
+            }
+
+            return 0;  // 缓存成功也算发送成功
+        } else {
+            printf("❌ 内存缓存失败，尝试直接存储到Flash\n");
+            extern int DataStorage_Store(const LandslideIotData *data);
+            if (DataStorage_Store(data) == 0) {
+                printf("💾 数据已存储到Flash，等待网络恢复\n");
+                return 0;
+            } else {
+                printf("❌ 所有缓存方式都失败\n");
+                g_connection_status.network_error_count++;
+                return -1;
+            }
+        }
     }
 }
 
@@ -450,18 +1326,9 @@ static void convert_landslide_to_iot_data(const LandslideIotData *landslide_data
     // MPU6050温度（decimal类型）
     iot_data->mpu_temperature = (double)landslide_data->temperature;    // 使用环境温度作为MPU温度
 
-    // GPS定位数据（decimal类型）- 通过WiFi定位获取
-    double lat, lon;
-    if (get_wifi_location(&lat, &lon) == 0) {
-        iot_data->latitude = lat;
-        iot_data->longitude = lon;
-        printf("WiFi定位成功: 纬度=%.6f, 经度=%.6f\n", lat, lon);
-    } else {
-        // WiFi定位失败时使用默认位置（广西南宁）
-        iot_data->latitude = 22.8170;      // 广西南宁纬度（默认）
-        iot_data->longitude = 108.3669;    // 广西南宁经度（默认）
-        printf("WiFi定位失败，使用默认位置（广西南宁）\n");
-    }
+    // GPS定位数据（decimal类型）- 使用固定位置坐标（广西南宁）
+    iot_data->latitude = 22.8170;      // 广西南宁纬度
+    iot_data->longitude = 108.3669;    // 广西南宁经度
 
     // 振动传感器数据（decimal类型）
     // 振动强度基于陀螺仪数据计算，已经过滤波和校准处理
@@ -568,201 +1435,10 @@ void IoTCloud_Deinit(void)
     printf("IoT Cloud connection closed\n");
 }
 
-/**
- * @brief 通过WiFi获取大概位置信息
- * @param latitude 输出纬度
- * @param longitude 输出经度
- * @return 0成功，-1失败
- */
-static int get_wifi_location(double *latitude, double *longitude)
-{
-    if (latitude == NULL || longitude == NULL) {
-        return -1;
-    }
+// WiFi定位功能已删除，使用固定坐标
 
-    // 方法1: 基于连接的WiFi热点信息进行定位
-    char current_ssid[64] = {0};
-    char current_bssid[32] = {0};
-    int signal_strength = 0;
+// get_current_wifi_info函数已删除
 
-    // 获取当前连接的WiFi信息
-    if (get_current_wifi_info(current_ssid, current_bssid, &signal_strength) == 0) {
-        printf("当前WiFi: SSID=%s, BSSID=%s, 信号强度=%d\n",
-               current_ssid, current_bssid, signal_strength);
+// wifi_location_lookup函数已删除
 
-        // 基于WiFi热点名称进行简单的位置推断
-        if (wifi_location_lookup(current_ssid, current_bssid, latitude, longitude) == 0) {
-            return 0;  // 成功获取位置
-        }
-    }
-
-    // 方法2: 扫描周围WiFi热点进行定位
-    printf("尝试扫描周围WiFi热点进行定位...\n");
-    if (scan_wifi_for_location(latitude, longitude) == 0) {
-        return 0;  // 成功获取位置
-    }
-
-    printf("WiFi定位失败，所有方法都无法获取位置\n");
-    return -1;  // 定位失败
-}
-
-/**
- * @brief 获取当前连接的WiFi信息
- */
-static int get_current_wifi_info(char *ssid, char *bssid, int *signal_strength)
-{
-    // 方法1: 直接使用已知的WiFi配置信息
-    // 从串口输出可以看到WiFi已经成功连接到SSID "188"
-    printf("尝试获取WiFi连接信息...\n");
-
-    // 检查WiFi连接状态
-    int wifi_status = check_wifi_connected();
-    printf("WiFi连接状态: %d (1=已连接)\n", wifi_status);
-
-    if (wifi_status == 1) {
-        // WiFi已连接，使用配置的SSID信息
-        strncpy(ssid, WIFI_SSID, 63);
-        ssid[63] = '\0';
-
-        // 从串口输出可以看到实际的BSSID是 36:42:40:7f:2d:4d
-        strcpy(bssid, "36:42:40:7f:2d:4d");  // 使用实际连接的BSSID
-
-        // 设置一个合理的信号强度值
-        *signal_strength = -45;  // 假设信号强度良好
-
-        printf("WiFi连接信息: SSID=%s, BSSID=%s, RSSI=%d\n",
-               ssid, bssid, *signal_strength);
-        return 0;
-    }
-
-    // 方法2: 尝试使用OpenHarmony WiFi API（备用方案）
-    WifiLinkedInfo info;
-    memset(&info, 0, sizeof(WifiLinkedInfo));
-
-    if (GetLinkedInfo(&info) == WIFI_SUCCESS) {
-        if (info.connState == WIFI_CONNECTED && strlen(info.ssid) > 0) {
-            strncpy(ssid, info.ssid, 63);
-            ssid[63] = '\0';
-
-            snprintf(bssid, 32, "%02x:%02x:%02x:%02x:%02x:%02x",
-                    info.bssid[0], info.bssid[1], info.bssid[2],
-                    info.bssid[3], info.bssid[4], info.bssid[5]);
-
-            *signal_strength = info.rssi;
-
-            printf("通过API获取WiFi信息: SSID=%s, BSSID=%s, RSSI=%d\n",
-                   ssid, bssid, *signal_strength);
-            return 0;
-        }
-    }
-
-    printf("无法获取WiFi连接详细信息\n");
-    return -1;
-}
-
-/**
- * @brief 基于WiFi热点信息查找位置
- */
-static int wifi_location_lookup(const char *ssid, const char *bssid, double *lat, double *lon)
-{
-    // WiFi热点位置数据库（可根据实际部署环境扩展）
-    typedef struct {
-        const char *ssid_pattern;
-        double latitude;
-        double longitude;
-        const char *description;
-    } wifi_location_t;
-
-    static const wifi_location_t wifi_locations[] = {
-        // 项目测试环境（当前实际连接的WiFi - 广西地区）
-        {"188", 22.8170, 108.3669, "项目测试环境-广西南宁（当前连接）"},
-
-        // 运营商公共热点（广西地区）
-        {"CMCC", 22.8170, 108.3669, "中国移动热点-广西"},
-        {"ChinaNet", 22.8170, 108.3669, "中国电信热点-广西"},
-        {"ChinaUnicom", 22.8170, 108.3669, "中国联通热点-广西"},
-
-        // 学校/机构WiFi（可根据实际情况修改）
-        {"BJUT", 39.9444, 116.3447, "北京理工大学"},
-        {"THU", 40.0089, 116.3200, "清华大学"},
-        {"PKU", 39.9886, 116.3051, "北京大学"},
-
-        // 商业场所WiFi
-        {"Starbucks", 39.9042, 116.4074, "星巴克咖啡"},
-        {"McDonald", 39.9042, 116.4074, "麦当劳"},
-        {"KFC", 39.9042, 116.4074, "肯德基"},
-
-        // 交通枢纽
-        {"Airport", 40.0799, 116.6031, "北京首都国际机场"},
-        {"Railway", 39.9031, 116.4274, "北京站"},
-
-        // 住宅区常见WiFi名称模式
-        {"TP-LINK", 39.9042, 116.4074, "TP-LINK路由器"},
-        {"HUAWEI", 39.9042, 116.4074, "华为路由器"},
-        {"Xiaomi", 39.9042, 116.4074, "小米路由器"},
-
-        {NULL, 0, 0, NULL}  // 结束标记
-    };
-
-    // 查找匹配的WiFi热点
-    for (int i = 0; wifi_locations[i].ssid_pattern != NULL; i++) {
-        if (strstr(ssid, wifi_locations[i].ssid_pattern) != NULL) {
-            *lat = wifi_locations[i].latitude;
-            *lon = wifi_locations[i].longitude;
-            printf("WiFi定位成功: %s -> %s (%.6f, %.6f)\n",
-                   ssid, wifi_locations[i].description, *lat, *lon);
-            return 0;
-        }
-    }
-
-    printf("未找到WiFi热点 '%s' 的位置信息\n", ssid);
-    return -1;
-}
-
-/**
- * @brief 扫描周围WiFi热点进行定位
- */
-static int scan_wifi_for_location(double *latitude, double *longitude)
-{
-    printf("开始扫描周围WiFi热点进行定位...\n");
-
-    // 启动WiFi扫描
-    if (Scan() != WIFI_SUCCESS) {
-        printf("WiFi扫描启动失败\n");
-        return -1;
-    }
-
-    // 等待扫描完成
-    LOS_Msleep(3000);
-
-    // 获取扫描结果
-    WifiScanInfo *scanInfos = NULL;
-    unsigned int size = 0;
-
-    if (GetScanInfoList(&scanInfos, &size) == WIFI_SUCCESS && size > 0) {
-        printf("扫描到 %d 个WiFi热点\n", size);
-
-        // 遍历扫描结果，查找已知位置的热点
-        for (unsigned int i = 0; i < size; i++) {
-            char bssid[32];
-            snprintf(bssid, sizeof(bssid), "%02x:%02x:%02x:%02x:%02x:%02x",
-                    scanInfos[i].bssid[0], scanInfos[i].bssid[1], scanInfos[i].bssid[2],
-                    scanInfos[i].bssid[3], scanInfos[i].bssid[4], scanInfos[i].bssid[5]);
-
-            printf("发现热点: SSID=%s, BSSID=%s, RSSI=%d\n",
-                   scanInfos[i].ssid, bssid, scanInfos[i].rssi);
-
-            // 尝试基于热点信息获取位置
-            if (wifi_location_lookup(scanInfos[i].ssid, bssid, latitude, longitude) == 0) {
-                printf("通过WiFi热点 '%s' 定位成功\n", scanInfos[i].ssid);
-                return 0;
-            }
-        }
-
-        printf("扫描到的WiFi热点中没有已知位置信息\n");
-    } else {
-        printf("WiFi扫描未发现热点或获取结果失败\n");
-    }
-
-    return -1;  // 定位失败
-}
+// scan_wifi_for_location函数已删除

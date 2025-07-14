@@ -125,10 +125,75 @@ bool IoTCloud_IsConnected(void);
 int IoTCloud_SendData(const LandslideIotData *data);
 int IoTCloud_StartTask(void);
 
+// 网络任务函数
+void IoTNetworkTask(void);
+
 // 命令处理函数
 void IoTCloud_ProcessCommand(const char *command_name, const char *payload);
 void IoTCloud_HandleResetCommand(void);
 void IoTCloud_HandleConfigCommand(const char *config_data);
+
+// 数据缓存和重发配置
+#define MAX_CACHE_SIZE 100              // 最大缓存数据条数
+#define CACHE_FILE_PATH "/data/iot_cache.dat"  // 缓存文件路径
+#define MAX_RETRY_COUNT 3               // 最大重试次数
+#define RETRY_INTERVAL_MS 5000          // 重试间隔(毫秒)
+
+// 缓存数据项结构
+typedef struct {
+    e_iot_data data;                    // IoT数据
+    uint32_t timestamp;                 // 时间戳
+    uint8_t retry_count;                // 重试次数
+    bool is_valid;                      // 数据有效标志
+} CachedDataItem;
+
+// 数据缓存管理结构
+typedef struct {
+    CachedDataItem items[MAX_CACHE_SIZE];  // 缓存数据数组
+    uint16_t head;                      // 队列头指针
+    uint16_t tail;                      // 队列尾指针
+    uint16_t count;                     // 当前缓存数量
+    bool is_full;                       // 缓存满标志
+    uint32_t total_cached;              // 总缓存数量统计
+    uint32_t total_sent;                // 总发送成功数量统计
+    uint32_t total_failed;              // 总发送失败数量统计
+} DataCache;
+
+// 连接状态和统计信息
+typedef struct {
+    bool mqtt_connected;                // MQTT连接状态
+    bool wifi_connected;                // WiFi连接状态
+    uint32_t last_connect_time;         // 上次连接时间
+    uint32_t disconnect_count;          // 断线次数
+    uint32_t reconnect_count;           // 重连次数
+    uint32_t last_data_send_time;       // 上次数据发送时间
+    uint32_t network_error_count;       // 网络错误次数
+} ConnectionStatus;
+
+// 数据缓存和重发功能
+int DataCache_Init(void);
+int DataCache_Add(const e_iot_data *data);
+int DataCache_SendPending(void);
+int DataCache_SaveToFile(void);
+int DataCache_LoadFromFile(void);
+int DataCache_LoadFromFlash(void);  // 从Flash加载数据到内存缓存
+void DataCache_Clear(void);
+void DataCache_PrintStats(void);
+
+// 连接状态管理
+void ConnectionStatus_Update(void);
+void ConnectionStatus_PrintStats(void);
+bool ConnectionStatus_IsStable(void);
+
+// 测试和演示功能
+void IoTCloud_TestCacheSystem(void);
+void IoTCloud_SimulateNetworkFailure(int duration_seconds);
+void IoTCloud_ForceResendCache(void);
+
+// 系统健康检查
+void IoTCloud_HealthCheck(void);
+void IoTCloud_PrintSystemStatus(void);
+bool IoTCloud_IsSystemHealthy(void);
 
 #ifdef __cplusplus
 }

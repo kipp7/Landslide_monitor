@@ -94,7 +94,15 @@ int DataStorage_Clear(void);
 int DataStorage_GetStats(StorageStats *stats);
 
 /**
- * @brief 上传所有缓存的数据
+ * @brief 处理Flash中的缓存数据
+ * @param callback 回调函数，用于处理每条数据
+ * @return 处理的数据条数
+ */
+int DataStorage_ProcessCached(int (*callback)(const LandslideIotData *data));
+
+/**
+ * @brief 上传所有缓存的数据（已弃用）
+ * @deprecated 建议使用DataStorage_ProcessCached配合内存缓存系统
  * @return 上传成功的记录数
  */
 int DataStorage_UploadCached(void);

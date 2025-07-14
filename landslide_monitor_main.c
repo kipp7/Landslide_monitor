@@ -645,7 +645,7 @@ static void RiskEvaluationTask(void)
             last_eval_time = current_time;
         }
 
-        LOS_Msleep(100);  // 100ms检查间隔
+        LOS_Msleep(50);   // 50ms检查间隔
     }
 
     printf("Risk evaluation task stopped\n");
@@ -785,7 +785,7 @@ static void DisplayTask(void)
             printf("Risk Level: %d\n", assessment.level);
         }
 
-        LOS_Msleep(200);  // 200ms检查间隔
+        LOS_Msleep(100);  // 100ms检查间隔
     }
 
     printf("Display task stopped\n");
@@ -841,22 +841,22 @@ static void AlarmTask(void)
         RiskAssessment current_risk;
         GetLatestRiskAssessment(&current_risk);
 
-        // 根据风险等级调整上传频率
+        // 根据风险等级调整上传频率（缩短间隔）
         switch (current_risk.level) {
             case RISK_LEVEL_SAFE:
-                upload_interval = 60000;    // 安全：60秒
+                upload_interval = 30000;    // 安全：30秒
                 break;
             case RISK_LEVEL_LOW:
-                upload_interval = 30000;    // 低风险：30秒
+                upload_interval = 15000;    // 低风险：15秒
                 break;
             case RISK_LEVEL_MEDIUM:
-                upload_interval = 10000;    // 中风险：10秒
+                upload_interval = 5000;     // 中风险：5秒
                 break;
             case RISK_LEVEL_HIGH:
-                upload_interval = 5000;     // 高风险：5秒
+                upload_interval = 3000;     // 高风险：3秒
                 break;
             case RISK_LEVEL_CRITICAL:
-                upload_interval = 2000;     // 危急：2秒
+                upload_interval = 1000;     // 危急：1秒
                 break;
         }
 
@@ -901,31 +901,11 @@ static void AlarmTask(void)
                 iot_data.motor_enabled = true;
                 iot_data.voice_enabled = true;
 
-                // 发送到云平台或存储到Flash
-                if (IoTCloud_IsConnected()) {
-                    // WiFi连接正常，直接上传
-                    if (IoTCloud_SendData(&iot_data) == 0) {
-                        last_iot_upload = current_time;
-                        printf("Data uploaded to cloud successfully\n");
-
-                        // 尝试上传之前缓存的数据
-                        static uint32_t last_cache_upload = 0;
-                        if (current_time - last_cache_upload >= 60000) {  // 每分钟尝试一次
-                            int uploaded = DataStorage_UploadCached();
-                            if (uploaded > 0) {
-                                printf("Uploaded %d cached records\n", uploaded);
-                            }
-                            last_cache_upload = current_time;
-                        }
-                    } else {
-                        printf("Failed to upload data, storing to Flash\n");
-                        DataStorage_Store(&iot_data);
-                    }
+                // 统一使用IoTCloud_SendData处理所有上传和缓存逻辑
+                if (IoTCloud_SendData(&iot_data) == 0) {
+                    last_iot_upload = current_time;
                 } else {
-                    // WiFi断开，存储到Flash
-                    printf("WiFi disconnected, storing data to Flash\n");
-                    DataStorage_Store(&iot_data);
-                    last_iot_upload = current_time;  // 更新时间，避免频繁存储
+                    printf("⚠️  数据发送失败，已自动处理缓存\n");
                 }
             }
         }
@@ -954,7 +934,7 @@ static void AlarmTask(void)
             g_alarm_acknowledged = false;  // 重置标志
         }
 
-        LOS_Msleep(500);  // 500ms检查间隔
+        LOS_Msleep(200);  // 200ms检查间隔
     }
 
     printf("Alarm task stopped\n");
@@ -1355,7 +1335,7 @@ void LandslideMonitorExample(void)
             last_status_time = current_time;
         }
 
-        LOS_Msleep(1000);  // 1秒检查间隔
+        LOS_Msleep(500);   // 500ms检查间隔
     }
 
     printf("=== Landslide Monitoring System Shutting Down ===\n");

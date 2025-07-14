@@ -23,13 +23,13 @@
 extern "C" {
 #endif
 
-// 系统配置参数
-#define SENSOR_SAMPLE_RATE_HZ       10      // 传感器采样频率 10Hz
+// 系统配置参数（优化响应速度）
+#define SENSOR_SAMPLE_RATE_HZ       15      // 传感器采样频率 15Hz
 #define DATA_BUFFER_SIZE           100      // 数据缓冲区大小
-#define RISK_EVAL_INTERVAL_MS      500      // 风险评估间隔 500ms
-#define LCD_UPDATE_INTERVAL_MS     5000     // LCD更新间隔 5秒
-#define LCD_DATA_CHANGE_THRESHOLD  0.5f    // 数据变化阈值
-#define VOICE_REPORT_INTERVAL_S    30       // 语音播报间隔 30秒
+#define RISK_EVAL_INTERVAL_MS      200      // 风险评估间隔 200ms
+#define LCD_UPDATE_INTERVAL_MS     2000     // LCD更新间隔 2秒
+#define LCD_DATA_CHANGE_THRESHOLD  0.3f    // 数据变化阈值（更敏感）
+#define VOICE_REPORT_INTERVAL_S    15       // 语音播报间隔 15秒
 
 // 线程优先级定义
 #define THREAD_PRIO_SENSOR          5       // 传感器采集线程优先级
