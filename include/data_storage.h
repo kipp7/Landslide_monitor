@@ -16,23 +16,12 @@ extern "C" {
 #define STORAGE_RECORD_SIZE         256         // 每条记录大小
 #define STORAGE_TOTAL_SIZE          (STORAGE_MAX_RECORDS * STORAGE_RECORD_SIZE)
 
-// 上传状态枚举
-typedef enum {
-    UPLOAD_STATUS_PENDING = 0,      // 待上传
-    UPLOAD_STATUS_UPLOADED = 1,     // 已上传
-    UPLOAD_STATUS_FAILED = 2,       // 上传失败
-    UPLOAD_STATUS_RETRY = 3         // 重试中
-} UploadStatus;
-
 // 存储记录头部
 typedef struct {
     uint32_t magic;             // 魔数 0x12345678
     uint32_t timestamp;         // 时间戳
     uint16_t data_size;         // 数据大小
     uint16_t checksum;          // 校验和
-    uint8_t upload_status;      // 上传状态
-    uint8_t retry_count;        // 重试次数
-    uint16_t reserved;          // 预留字段
 } StorageHeader;
 
 // 存储记录结构
@@ -121,43 +110,6 @@ bool DataStorage_IsFull(void);
  * @return 记录索引
  */
 uint32_t DataStorage_GetOldestIndex(void);
-
-/**
- * @brief 标记记录为已上传
- * @param index 记录索引
- * @return 0: 成功, 其他: 失败
- */
-int DataStorage_MarkAsUploaded(uint32_t index);
-
-/**
- * @brief 获取待上传的记录数量
- * @return 待上传记录数量
- */
-uint32_t DataStorage_GetPendingCount(void);
-
-/**
- * @brief 清理已上传的旧记录
- * @param keep_count 保留的记录数量
- * @return 清理的记录数量
- */
-int DataStorage_CleanupUploaded(uint32_t keep_count);
-
-/**
- * @brief 重置失败记录的重试计数
- * @return 重置的记录数量
- */
-int DataStorage_ResetRetryCount(void);
-
-/**
- * @brief 智能重试上传（带指数退避）
- * @return 处理的重试记录数量
- */
-int DataStorage_SmartRetryUpload(void);
-
-/**
- * @brief 获取存储健康状态
- */
-void DataStorage_GetHealthStatus(void);
 
 #ifdef __cplusplus
 }

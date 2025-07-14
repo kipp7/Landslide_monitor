@@ -910,40 +910,12 @@ static void AlarmTask(void)
 
                         // 尝试上传之前缓存的数据
                         static uint32_t last_cache_upload = 0;
-                        static uint32_t last_retry_upload = 0;
-                        static uint32_t last_health_check = 0;
-
                         if (current_time - last_cache_upload >= 60000) {  // 每分钟尝试一次
                             int uploaded = DataStorage_UploadCached();
                             if (uploaded > 0) {
                                 printf("Uploaded %d cached records\n", uploaded);
                             }
                             last_cache_upload = current_time;
-                        }
-
-                        // 智能重试失败的上传
-                        if (current_time - last_retry_upload >= 30000) {  // 每30秒重试一次
-                            int retried = DataStorage_SmartRetryUpload();
-                            if (retried > 0) {
-                                printf("Retried %d failed uploads\n", retried);
-                            }
-                            last_retry_upload = current_time;
-                        }
-
-                        // 定期健康检查和清理
-                        if (current_time - last_health_check >= 300000) {  // 每5分钟检查一次
-                            DataStorage_GetHealthStatus();
-
-                            // 如果存储使用率超过80%，清理一些已上传的旧数据
-                            uint32_t pending_count = DataStorage_GetPendingCount();
-                            if (pending_count > 80) {  // 80%使用率
-                                int cleaned = DataStorage_CleanupUploaded(60);  // 保留60条记录
-                                if (cleaned > 0) {
-                                    printf("Cleaned %d uploaded records to free space\n", cleaned);
-                                }
-                            }
-
-                            last_health_check = current_time;
                         }
                     } else {
                         printf("Failed to upload data, storing to Flash\n");
