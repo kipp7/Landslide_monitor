@@ -1,0 +1,61 @@
+# Copyright (c) 2024 iSoftStone Education Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+static_library("landslide_monitor_example") {
+  sources = [
+    "landslide_monitor_main.c",
+    "src/sensors.c",
+    "src/output_devices.c",
+    "src/lcd_display.c",
+    "src/lcd.c",  # 智能家居的稳定LCD驱动
+  ]
+
+  include_dirs = [
+    "include",
+    "//utils/native/lite/include",
+    "//kernel/liteos_m/components/shell/include",
+    "//base/iot_hardware/peripheral/interfaces/kits",
+    "//device/rockchip/rk2206/adapter/include",
+    "//device/rockchip/rk2206/sdk_liteos/board/include",
+    "//device/rockchip/hardware/lib/hal/inc",
+    "//device/rockchip/hardware/lib/CMSIS/Device/RK2206/Include/",
+    "//third_party/musl/porting/liteos_m/kernel/include",
+    "//vendor/isoftstone/rk2206/samples/e1_iot_smart_home/include",
+  ]
+
+  deps = [
+    "//device/rockchip/hardware:hardware"
+  ]
+
+  defines = [
+    "LANDSLIDE_MONITOR_VERSION=\"2.0.0\"",
+    "SENSOR_SAMPLE_RATE_HZ=10",
+    "DATA_BUFFER_SIZE=100",
+    "USE_REAL_SENSORS=1",
+  ]
+
+  cflags = [
+    "-Wall",
+    "-Wextra", 
+    "-Werror",
+    "-std=c99",
+  ]
+
+  cflags_c = [
+    "-Wno-unused-parameter",
+    "-Wno-sign-compare",
+    "-Wno-unused-variable",
+    "-Wno-missing-braces",
+    "-Wno-implicit-function-declaration",
+  ]
+}
