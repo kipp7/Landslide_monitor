@@ -41,8 +41,24 @@ extern "C" {
 #define MOTOR_PIN                   GPIO0_PC6   // PWM6
 #define MOTOR_PWM                   EPWMDEV_PWM6_M0
 
-// 功能按键配置
-#define BUTTON_PIN                  GPIO0_PC7
+// 报警灯配置
+#define ALARM_LIGHT_PIN             GPIO0_PA5   // 硬件设计的报警灯引脚
+
+// 功能按键配置（ADC模式，支持4个按键）
+#define BUTTON_ADC_CHANNEL          4                   // GPIO0_PC7对应ADC通道4
+
+// 4个按键的ADC阈值范围（基于官方例程b3_adc_key）
+// 参考官方文档：无按键>3.2V, K3≈10mv, K4≈1V, K5≈1.65V, K6≈0.55V
+#define BUTTON_K3_MIN               0                   // K3(UP)按键：0V-0.5V → ADC 0-155
+#define BUTTON_K3_MAX               155
+#define BUTTON_K6_MIN               155                 // K6(RIGHT)按键：0.5V-1.0V → ADC 155-310
+#define BUTTON_K6_MAX               310
+#define BUTTON_K4_MIN               310                 // K4(DOWN)按键：1.0V-1.5V → ADC 310-465
+#define BUTTON_K4_MAX               465
+#define BUTTON_K5_MIN               465                 // K5(LEFT)按键：1.5V-3.2V → ADC 465-992
+#define BUTTON_K5_MAX               992
+#define BUTTON_RELEASED_MIN         992                 // 未按下：>3.2V → ADC >992
+#define BUTTON_RELEASED_MAX         1024
 
 // 语音模块配置 (UART)
 #define VOICE_UART_TX               GPIO0_PB2
@@ -60,15 +76,15 @@ typedef struct {
     uint16_t blue;              // 蓝色分量 (0-4095)
 } RGB_Color;
 
-// 预定义颜色
-#define RGB_COLOR_OFF       {0, 0, 0}
-#define RGB_COLOR_RED       {4095, 0, 0}
-#define RGB_COLOR_GREEN     {0, 4095, 0}
-#define RGB_COLOR_BLUE      {0, 0, 4095}
-#define RGB_COLOR_YELLOW    {4095, 4095, 0}
-#define RGB_COLOR_ORANGE    {4095, 2048, 0}
-#define RGB_COLOR_PURPLE    {4095, 0, 4095}
-#define RGB_COLOR_WHITE     {4095, 4095, 4095}
+// 预定义纯色（每次只点亮一种颜色，避免混色）
+#define RGB_COLOR_OFF       {0, 0, 0}         // 全部关闭
+#define RGB_COLOR_RED       {4095, 0, 0}      // 纯红色：只有红色LED
+#define RGB_COLOR_GREEN     {0, 4095, 0}      // 纯绿色：只有绿色LED
+#define RGB_COLOR_BLUE      {0, 0, 4095}      // 纯蓝色：只有蓝色LED
+#define RGB_COLOR_YELLOW    {0, 4095, 0}      // 黄色用绿色表示（纯色方案）
+#define RGB_COLOR_ORANGE    {4095, 0, 0}      // 橙色用红色表示（纯色方案）
+#define RGB_COLOR_PURPLE    {0, 0, 4095}      // 紫色用蓝色表示（纯色方案）
+#define RGB_COLOR_WHITE     {4095, 4095, 4095} // 白色（测试用）
 
 // 蜂鸣器模式
 typedef enum {
@@ -80,12 +96,15 @@ typedef enum {
     BUZZER_MODE_PULSE           // 脉冲响
 } BuzzerMode;
 
-// 按键状态
+// 按键状态（支持4个按键）
 typedef enum {
-    BUTTON_STATE_RELEASED = 0,  // 释放
-    BUTTON_STATE_PRESSED,       // 按下
-    BUTTON_STATE_SHORT_PRESS,   // 短按
-    BUTTON_STATE_LONG_PRESS     // 长按
+    BUTTON_STATE_RELEASED = 0,      // 释放
+    BUTTON_STATE_K3_PRESSED,        // K3按键按下（手动重置）
+    BUTTON_STATE_K4_PRESSED,        // K4按键按下（切换显示模式）
+    BUTTON_STATE_K5_PRESSED,        // K5按键按下（静音/取消静音）
+    BUTTON_STATE_K6_PRESSED,        // K6按键按下（预留功能）
+    BUTTON_STATE_SHORT_PRESS,       // 短按（兼容）
+    BUTTON_STATE_LONG_PRESS         // 长按（兼容）
 } ButtonState;
 
 // 语音播报内容
@@ -129,6 +148,13 @@ void Motor_Vibrate(uint32_t duration_ms);
 void Motor_VibrateByRisk(RiskLevel risk_level);
 void Motor_Off(void);
 
+// 报警灯控制
+int AlarmLight_Init(void);
+void AlarmLight_SetState(bool state);
+void AlarmLight_SetByRisk(RiskLevel risk_level);
+void AlarmLight_Blink(uint32_t interval_ms);
+void AlarmLight_Off(void);
+
 // 按键控制
 int Button_Init(void);
 ButtonState Button_GetState(void);
@@ -154,6 +180,12 @@ bool Motor_IsInitialized(void);
 bool Button_IsInitialized(void);
 bool Voice_IsInitialized(void);
 bool LCD_IsInitialized(void);
+
+// 云端控制接口 (MQTT华为云IoT)
+void CloudCommand_ProcessReset(void);
+void CloudCommand_ProcessAlarmAck(void);
+bool CloudCommand_IsAlarmAcknowledged(void);
+void CloudCommand_SetAlarmAck(bool ack);
 
 #ifdef __cplusplus
 }

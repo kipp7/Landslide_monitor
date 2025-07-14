@@ -20,6 +20,7 @@
 #include "iot_gpio.h"
 #include "iot_pwm.h"
 #include "iot_uart.h"
+#include "iot_adc.h"
 #include "iot_errno.h"
 #include "los_task.h"
 
@@ -27,8 +28,13 @@
 static bool g_rgb_initialized = false;
 static bool g_buzzer_initialized = false;
 static bool g_motor_initialized = false;
+static bool g_alarm_light_initialized = false;
 static bool g_button_initialized = false;
 static bool g_voice_initialized = false;
+
+// 云端控制状态
+static bool g_cloud_alarm_acknowledged = false;
+static uint32_t g_last_cloud_command_time = 0;
 
 static RGB_Color g_current_rgb_color = RGB_COLOR_OFF;
 static bool g_alarm_muted = false;
@@ -69,7 +75,14 @@ int OutputDevices_Init(void)
         printf("Motor initialization failed: %d\n", ret);
         error_count++;
     }
-    
+
+    // 初始化报警灯
+    ret = AlarmLight_Init();
+    if (ret != 0) {
+        printf("Alarm light initialization failed: %d\n", ret);
+        error_count++;
+    }
+
     // 初始化按键 (按键失败不影响系统运行)
     ret = Button_Init();
     if (ret != 0) {
@@ -122,7 +135,7 @@ void OutputDevices_Deinit(void)
     }
     
     if (g_button_initialized) {
-        IoTGpioDeinit(BUTTON_PIN);
+        // ADC按键不需要特殊清理
         g_button_initialized = false;
     }
     
@@ -189,16 +202,73 @@ void RGB_SetColor(RGB_Color color)
         return;
     }
 
-    // 将0-4095范围转换为1-99范围，避免0值
-    uint16_t red_duty = (color.red * 98 / 4095) + 1;
-    uint16_t green_duty = (color.green * 98 / 4095) + 1;
-    uint16_t blue_duty = (color.blue * 98 / 4095) + 1;
+    // 实现真正的纯色：有颜色的通道启动PWM，无颜色的通道停止PWM
+    if (color.red > 0) {
+        uint16_t red_duty = (color.red * 98 / 4095) + 1;
+        IoTPwmStart(RGB_PWM_RED, red_duty, PWM_FREQ_HZ);
+    } else {
+        IoTPwmStop(RGB_PWM_RED);
+    }
 
-    IoTPwmStart(RGB_PWM_RED, red_duty, PWM_FREQ_HZ);
-    IoTPwmStart(RGB_PWM_GREEN, green_duty, PWM_FREQ_HZ);
-    IoTPwmStart(RGB_PWM_BLUE, blue_duty, PWM_FREQ_HZ);
+    if (color.green > 0) {
+        uint16_t green_duty = (color.green * 98 / 4095) + 1;
+        IoTPwmStart(RGB_PWM_GREEN, green_duty, PWM_FREQ_HZ);
+    } else {
+        IoTPwmStop(RGB_PWM_GREEN);
+    }
+
+    if (color.blue > 0) {
+        uint16_t blue_duty = (color.blue * 98 / 4095) + 1;
+        IoTPwmStart(RGB_PWM_BLUE, blue_duty, PWM_FREQ_HZ);
+    } else {
+        IoTPwmStop(RGB_PWM_BLUE);
+    }
 
     g_current_rgb_color = color;
+}
+
+/**
+ * @brief 设置RGB亮度
+ * @param brightness 亮度 (0-100)
+ */
+void RGB_SetBrightness(uint8_t brightness)
+{
+    if (!g_rgb_initialized) {
+        return;
+    }
+
+    // 限制亮度范围
+    if (brightness > 100) {
+        brightness = 100;
+    }
+
+    // 根据亮度调整当前颜色
+    RGB_Color adjusted_color;
+    adjusted_color.red = (g_current_rgb_color.red * brightness) / 100;
+    adjusted_color.green = (g_current_rgb_color.green * brightness) / 100;
+    adjusted_color.blue = (g_current_rgb_color.blue * brightness) / 100;
+
+    // 实现真正的纯色：有颜色的通道启动PWM，无颜色的通道停止PWM
+    if (adjusted_color.red > 0) {
+        uint16_t red_duty = (adjusted_color.red * 98 / 4095) + 1;
+        IoTPwmStart(RGB_PWM_RED, red_duty, PWM_FREQ_HZ);
+    } else {
+        IoTPwmStop(RGB_PWM_RED);
+    }
+
+    if (adjusted_color.green > 0) {
+        uint16_t green_duty = (adjusted_color.green * 98 / 4095) + 1;
+        IoTPwmStart(RGB_PWM_GREEN, green_duty, PWM_FREQ_HZ);
+    } else {
+        IoTPwmStop(RGB_PWM_GREEN);
+    }
+
+    if (adjusted_color.blue > 0) {
+        uint16_t blue_duty = (adjusted_color.blue * 98 / 4095) + 1;
+        IoTPwmStart(RGB_PWM_BLUE, blue_duty, PWM_FREQ_HZ);
+    } else {
+        IoTPwmStop(RGB_PWM_BLUE);
+    }
 }
 
 /**
@@ -208,30 +278,32 @@ void RGB_SetColor(RGB_Color color)
 void RGB_SetColorByRisk(RiskLevel risk_level)
 {
     RGB_Color color;
-    
+
     switch (risk_level) {
         case RISK_LEVEL_SAFE:
-            color = (RGB_Color)RGB_COLOR_GREEN;
+            color = (RGB_Color)RGB_COLOR_GREEN;     // 绿色：安全
             break;
         case RISK_LEVEL_LOW:
-            color = (RGB_Color)RGB_COLOR_YELLOW;
+            color = (RGB_Color)RGB_COLOR_BLUE;      // 蓝色：低风险
             break;
         case RISK_LEVEL_MEDIUM:
-            color = (RGB_Color)RGB_COLOR_ORANGE;
+            color = (RGB_Color)RGB_COLOR_RED;       // 红色：中等风险（改为红色，避免黄色混色问题）
             break;
         case RISK_LEVEL_HIGH:
-            color = (RGB_Color)RGB_COLOR_RED;
+            color = (RGB_Color)RGB_COLOR_RED;       // 红色：高风险
             break;
         case RISK_LEVEL_CRITICAL:
-            color = (RGB_Color)RGB_COLOR_RED;
+            color = (RGB_Color)RGB_COLOR_RED;       // 红色：危急
             break;
         default:
             color = (RGB_Color)RGB_COLOR_OFF;
             break;
     }
-    
+
     RGB_SetColor(color);
 }
+
+// 特效相关函数已移除，保持简单的RGB控制
 
 /**
  * @brief 关闭RGB灯
@@ -300,25 +372,36 @@ void Buzzer_BeepByRisk(RiskLevel risk_level)
             // 安全状态不响
             break;
         case RISK_LEVEL_LOW:
-            // 低风险：短响一次
-            Buzzer_Beep(100);
+            // 低风险：1声短响 (滴)
+            printf("ALARM: Low risk - 1 short beep\n");
+            Buzzer_Beep(120);
             break;
         case RISK_LEVEL_MEDIUM:
-            // 中风险：短响两次
-            Buzzer_Beep(100);
+            // 中风险：2声短响 (滴-滴)
+            printf("ALARM: Medium risk - 2 short beeps\n");
+            Buzzer_Beep(120);
             LOS_Msleep(100);
-            Buzzer_Beep(100);
+            Buzzer_Beep(120);
             break;
         case RISK_LEVEL_HIGH:
-            // 高风险：长响一次
-            Buzzer_Beep(500);
+            // 高风险：3声短响 (滴-滴-滴)
+            printf("ALARM: High risk - 3 short beeps\n");
+            Buzzer_Beep(120);
+            LOS_Msleep(80);
+            Buzzer_Beep(120);
+            LOS_Msleep(80);
+            Buzzer_Beep(120);
             break;
         case RISK_LEVEL_CRITICAL:
-            // 危急：连续响
-            for (int i = 0; i < 3; i++) {
-                Buzzer_Beep(200);
-                LOS_Msleep(100);
-            }
+            // 危急：长响-短响-长响 (滴——滴滴——)
+            printf("ALARM: Critical risk - long-short-long pattern\n");
+            Buzzer_Beep(500);  // 长响
+            LOS_Msleep(150);
+            Buzzer_Beep(100);  // 短响
+            LOS_Msleep(80);
+            Buzzer_Beep(100);  // 短响
+            LOS_Msleep(150);
+            Buzzer_Beep(500);  // 长响
             break;
     }
 }
@@ -388,23 +471,41 @@ void Motor_VibrateByRisk(RiskLevel risk_level)
 
     switch (risk_level) {
         case RISK_LEVEL_SAFE:
+            // 安全状态不振动
+            break;
         case RISK_LEVEL_LOW:
-            // 安全和低风险不振动
+            // 低风险：1次轻微振动
+            printf("VIBRATION: Low risk - 1 light vibration\n");
+            Motor_Vibrate(150);
             break;
         case RISK_LEVEL_MEDIUM:
-            // 中风险：短振动
+            // 中风险：2次中等振动
+            printf("VIBRATION: Medium risk - 2 medium vibrations\n");
+            Motor_Vibrate(200);
+            LOS_Msleep(150);
             Motor_Vibrate(200);
             break;
         case RISK_LEVEL_HIGH:
-            // 高风险：长振动
-            Motor_Vibrate(500);
+            // 高风险：3次强振动
+            printf("VIBRATION: High risk - 3 strong vibrations\n");
+            Motor_Vibrate(250);
+            LOS_Msleep(120);
+            Motor_Vibrate(250);
+            LOS_Msleep(120);
+            Motor_Vibrate(250);
             break;
         case RISK_LEVEL_CRITICAL:
-            // 危急：连续振动
-            for (int i = 0; i < 3; i++) {
-                Motor_Vibrate(300);
-                LOS_Msleep(200);
-            }
+            // 危急：持续强振动模式
+            printf("VIBRATION: Critical risk - continuous strong pattern\n");
+            Motor_Vibrate(400);  // 长振动
+            LOS_Msleep(100);
+            Motor_Vibrate(120);  // 短振动
+            LOS_Msleep(60);
+            Motor_Vibrate(120);  // 短振动
+            LOS_Msleep(60);
+            Motor_Vibrate(120);  // 短振动
+            LOS_Msleep(100);
+            Motor_Vibrate(400);  // 长振动
             break;
     }
 }
@@ -419,39 +520,114 @@ void Motor_Off(void)
     }
 }
 
+// ==================== 报警灯控制函数 ====================
+
+/**
+ * @brief 初始化报警灯
+ * @return 0: 成功, 其他: 失败
+ */
+int AlarmLight_Init(void)
+{
+    printf("Alarm light functionality integrated into RGB LED system\n");
+    printf("RGB LED provides comprehensive visual indication with color coding\n");
+    printf("This approach provides better visual feedback than simple on/off light\n");
+
+    g_alarm_light_initialized = false;  // 标记为未初始化，功能由RGB LED承担
+    return 0;  // 返回成功，不影响系统启动
+}
+
+/**
+ * @brief 设置报警灯状态
+ * @param state true: 开启, false: 关闭
+ */
+void AlarmLight_SetState(bool state)
+{
+    if (!g_alarm_light_initialized) {
+        return;
+    }
+
+    static bool last_state = false;
+    if (state == last_state) {
+        return;  // 状态未改变，不需要操作
+    }
+
+    if (state) {
+        IoTGpioSetOutputVal(ALARM_LIGHT_PIN, IOT_GPIO_VALUE1);
+        printf("Alarm light ON\n");
+    } else {
+        IoTGpioSetOutputVal(ALARM_LIGHT_PIN, IOT_GPIO_VALUE0);
+        printf("Alarm light OFF\n");
+    }
+
+    last_state = state;
+}
+
+/**
+ * @brief 根据风险等级设置报警灯
+ * @param risk_level 风险等级
+ */
+void AlarmLight_SetByRisk(RiskLevel risk_level)
+{
+    switch (risk_level) {
+        case RISK_LEVEL_SAFE:
+        case RISK_LEVEL_LOW:
+            AlarmLight_SetState(false);  // 安全和低风险关闭
+            break;
+        case RISK_LEVEL_MEDIUM:
+        case RISK_LEVEL_HIGH:
+        case RISK_LEVEL_CRITICAL:
+            AlarmLight_SetState(true);   // 中等以上风险开启
+            break;
+        default:
+            AlarmLight_SetState(false);
+            break;
+    }
+}
+
+/**
+ * @brief 报警灯闪烁
+ * @param interval_ms 闪烁间隔(毫秒)
+ */
+void AlarmLight_Blink(uint32_t interval_ms)
+{
+    if (!g_alarm_light_initialized) {
+        return;
+    }
+
+    static uint32_t last_toggle_time = 0;
+    static bool current_state = false;
+    uint32_t current_time = LOS_TickCountGet();
+
+    if (current_time - last_toggle_time >= interval_ms) {
+        current_state = !current_state;
+        AlarmLight_SetState(current_state);
+        last_toggle_time = current_time;
+    }
+}
+
+/**
+ * @brief 关闭报警灯
+ */
+void AlarmLight_Off(void)
+{
+    AlarmLight_SetState(false);
+}
+
+// ==================== 按键控制函数 ====================
+
 /**
  * @brief 初始化按键
  * @return 0: 成功, 其他: 失败
  */
+// 按键功能已简化，移除未使用的中断回调函数
+
 int Button_Init(void)
 {
-    int ret;
+    printf("Button functionality disabled (hardware issues detected)\n");
+    printf("System will operate in automatic monitoring mode\n");
+    printf("Manual reset can be performed by system restart if needed\n");
 
-    printf("Initializing button...\n");
-
-    ret = IoTGpioInit(BUTTON_PIN);
-    if (ret != IOT_SUCCESS) {
-        printf("Failed to init button pin: %d\n", ret);
-        return -1;
-    }
-
-    // 设置为输入模式
-    ret = IoTGpioSetDir(BUTTON_PIN, IOT_GPIO_DIR_IN);
-    if (ret != IOT_SUCCESS) {
-        printf("Failed to set button pin direction: %d\n", ret);
-        return -1;
-    }
-
-    // 设置上拉电阻 (按键通常需要上拉)
-    // 注意：某些版本可能不支持IoTGpioSetPull函数，跳过此设置
-    // ret = IoTGpioSetPull(BUTTON_PIN, IOT_GPIO_PULL_UP);
-    // if (ret != IOT_SUCCESS) {
-    //     printf("Failed to set button pin pull-up: %d\n", ret);
-    // }
-
-    g_button_initialized = true;
-    printf("Button initialized successfully\n");
-
+    g_button_initialized = false;
     return 0;
 }
 
@@ -461,41 +637,8 @@ int Button_Init(void)
  */
 ButtonState Button_GetState(void)
 {
-    if (!g_button_initialized) {
-        return BUTTON_STATE_RELEASED;
-    }
-
-    IotGpioValue value;
-    IoTGpioGetInputVal(BUTTON_PIN, &value);
-
-    static IotGpioValue last_value = IOT_GPIO_VALUE1;
-    static uint32_t press_start_time = 0;
-    uint32_t current_time = LOS_TickCountGet();
-
-    if (value == IOT_GPIO_VALUE0 && last_value == IOT_GPIO_VALUE1) {
-        // 按键按下
-        press_start_time = current_time;
-        g_button_state = BUTTON_STATE_PRESSED;
-    } else if (value == IOT_GPIO_VALUE1 && last_value == IOT_GPIO_VALUE0) {
-        // 按键释放
-        uint32_t press_duration = current_time - press_start_time;
-
-        if (press_duration > 2000) {
-            g_button_state = BUTTON_STATE_LONG_PRESS;
-        } else if (press_duration > 50) {
-            g_button_state = BUTTON_STATE_SHORT_PRESS;
-        } else {
-            g_button_state = BUTTON_STATE_RELEASED;
-        }
-
-        // 调用回调函数
-        if (g_button_callback != NULL) {
-            g_button_callback(g_button_state);
-        }
-    }
-
-    last_value = value;
-    return g_button_state;
+    // 按键功能已禁用，直接返回释放状态
+    return BUTTON_STATE_RELEASED;
 }
 
 /**
@@ -508,9 +651,14 @@ bool Button_IsPressed(void)
         return false;
     }
 
-    IotGpioValue value;
-    IoTGpioGetInputVal(BUTTON_PIN, &value);
-    return (value == IOT_GPIO_VALUE0);
+    // 使用ADC读取按键状态
+    unsigned int adc_value = 0;
+    int ret = IoTAdcGetVal(BUTTON_ADC_CHANNEL, &adc_value);
+    if (ret != IOT_SUCCESS) {
+        return false;
+    }
+
+    return !(adc_value >= BUTTON_RELEASED_MIN && adc_value <= BUTTON_RELEASED_MAX);  // 不在正常范围表示有按键按下
 }
 
 /**

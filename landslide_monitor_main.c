@@ -27,14 +27,23 @@
 #include "sensors.h"
 #include "output_devices.h"
 #include "lcd.h"  // 添加LCD头文件以使用颜色定义
+#include "iot_cloud.h"  // 华为云IoT功能
 
 // 全局变量
 static SystemState g_system_state = SYSTEM_STATE_INIT;
 static SensorData g_latest_sensor_data;
 static ProcessedData g_latest_processed_data;
 static RiskAssessment g_latest_risk_assessment;
+
+// 云端控制变量
+bool g_alarm_acknowledged = false;  // 报警确认标志（可被云端命令设置）
 static SystemStats g_system_stats;
 static LcdDisplayMode g_lcd_mode = LCD_MODE_REALTIME;
+
+// 风险评估状态变量（全局，供多个任务访问）
+static bool manual_reset_required = false;
+static RiskLevel confirmed_level = RISK_LEVEL_SAFE;
+static RiskLevel max_triggered_level = RISK_LEVEL_SAFE;
 
 // 线程ID
 static UINT32 g_sensor_thread_id = 0;
@@ -384,6 +393,15 @@ static int InitializeHardware(void)
         printf("Some output devices failed to initialize: %d (continuing)\n", ret);
     }
 
+    // 初始化IoT云平台连接
+    ret = IoTCloud_Init();
+    if (ret != 0) {
+        printf("IoT Cloud initialization failed: %d (continuing without cloud)\n", ret);
+        // IoT失败不影响系统运行
+    } else {
+        printf("IoT Cloud initialized successfully\n");
+    }
+
     printf("Hardware initialization completed\n");
     return 0;
 }
@@ -455,6 +473,15 @@ static int CreateTasks(void)
     if (ret != LOS_OK) {
         printf("Failed to create alarm task: %d\n", ret);
         return -5;
+    }
+
+    // 启动IoT云平台任务
+    ret = IoTCloud_StartTask();
+    if (ret != 0) {
+        printf("Failed to start IoT task: %d (continuing without cloud)\n", ret);
+        // IoT任务失败不影响系统运行
+    } else {
+        printf("IoT task started successfully\n");
     }
 
     printf("All tasks created successfully\n");
@@ -563,6 +590,22 @@ static void RiskEvaluationTask(void)
 
     while (g_system_state == SYSTEM_STATE_RUNNING || g_system_state == SYSTEM_STATE_WARNING) {
         uint32_t current_time = LOS_TickCountGet();
+
+        // 优先检查重置标志（每次循环都检查）
+        if (g_alarm_acknowledged) {
+            printf("RiskEvalTask: Processing manual reset request...\n");
+            // 立即处理重置逻辑
+            LOS_MuxPend(g_data_mutex, LOS_WAIT_FOREVER);
+            ProcessedData temp_data = g_latest_processed_data;
+            LOS_MuxPost(g_data_mutex);
+
+            RiskAssessment temp_assessment;
+            EvaluateRisk(&temp_data, &temp_assessment);  // 这会处理重置逻辑
+
+            LOS_MuxPend(g_data_mutex, LOS_WAIT_FOREVER);
+            g_latest_risk_assessment = temp_assessment;
+            LOS_MuxPost(g_data_mutex);
+        }
 
         // 检查是否到了评估时间
         if (current_time - last_eval_time >= RISK_EVAL_INTERVAL_MS) {
@@ -758,6 +801,9 @@ static void AlarmTask(void)
         // 设置RGB指示灯
         RGB_SetColorByRisk(assessment.level);
 
+        // 设置报警灯
+        AlarmLight_SetByRisk(assessment.level);
+
         // 检查是否需要声音/振动报警
         if (assessment.level >= RISK_LEVEL_MEDIUM &&
             current_time - last_alarm_time >= 5000) {  // 5秒间隔
@@ -777,6 +823,68 @@ static void AlarmTask(void)
             }
 
             last_voice_time = current_time;
+        }
+
+        // 上传数据到华为云IoT平台 (每30秒上传一次)
+        static uint32_t last_iot_upload = 0;
+        if (IoTCloud_IsConnected() && current_time - last_iot_upload >= 30000) {
+            SensorData sensor_data;
+            GetLatestSensorData(&sensor_data);
+
+            if (sensor_data.data_valid) {
+                LandslideIotData iot_data = {0};
+
+                // 填充传感器数据
+                iot_data.temperature = sensor_data.sht_temperature;
+                iot_data.humidity = sensor_data.humidity;
+                iot_data.light = sensor_data.light_intensity;
+                iot_data.angle_x = sensor_data.angle_x;
+                iot_data.angle_y = sensor_data.angle_y;
+                iot_data.angle_z = 0.0f;  // 暂时设为0，实际项目中可计算Z轴角度
+                iot_data.vibration = sqrtf(sensor_data.accel_x * sensor_data.accel_x +
+                                         sensor_data.accel_y * sensor_data.accel_y +
+                                         sensor_data.accel_z * sensor_data.accel_z);
+
+                // 填充系统状态
+                iot_data.risk_level = assessment.level;
+                iot_data.alarm_active = (assessment.level >= RISK_LEVEL_MEDIUM);
+                iot_data.uptime = g_system_stats.uptime_seconds;
+
+                // 填充设备状态
+                iot_data.rgb_enabled = true;
+                iot_data.buzzer_enabled = true;
+                iot_data.motor_enabled = true;
+                iot_data.voice_enabled = true;
+
+                // 发送到云平台
+                if (IoTCloud_SendData(&iot_data) == 0) {
+                    last_iot_upload = current_time;
+                }
+            }
+        }
+
+        // 检查按键状态
+        Button_GetState();  // 按键检测会自动处理重置逻辑
+
+        // 检查云端重置命令
+        if (g_alarm_acknowledged) {
+            printf("Processing reset command...\n");
+            printf("Current system state: manual_reset_required=%s\n",
+                   manual_reset_required ? "true" : "false");
+            printf("Current confirmed_level=%d, max_triggered_level=%d\n",
+                   confirmed_level, max_triggered_level);
+
+            // 强制重置逻辑（无论当前状态如何）
+            if (manual_reset_required || max_triggered_level > RISK_LEVEL_LOW) {
+                confirmed_level = RISK_LEVEL_SAFE;
+                max_triggered_level = RISK_LEVEL_SAFE;
+                manual_reset_required = false;
+                printf("MANUAL RESET: Risk status cleared by operator. Resuming normal monitoring.\n");
+            } else {
+                printf("MANUAL RESET: System already in safe state, no reset needed.\n");
+            }
+
+            g_alarm_acknowledged = false;  // 重置标志
         }
 
         LOS_Msleep(500);  // 500ms检查间隔
@@ -844,10 +952,43 @@ static void ProcessSensorData(ProcessedData *processed)
     processed->angle_magnitude = sqrtf(current_data.angle_x * current_data.angle_x +
                                       current_data.angle_y * current_data.angle_y);
 
-    // 计算振动强度 (基于陀螺仪数据)
-    processed->vibration_intensity = sqrtf(current_data.gyro_x * current_data.gyro_x +
-                                          current_data.gyro_y * current_data.gyro_y +
-                                          current_data.gyro_z * current_data.gyro_z);
+    // 计算振动强度 (改进版：基于陀螺仪数据，加入滤波和校准)
+    static float gyro_baseline_x = 0.0f, gyro_baseline_y = 0.0f, gyro_baseline_z = 0.0f;
+    static bool baseline_initialized = false;
+    static int baseline_samples = 0;
+
+    // 初始化基线（前100个样本的平均值作为静态偏移）
+    if (!baseline_initialized) {
+        if (baseline_samples < 100) {
+            gyro_baseline_x += current_data.gyro_x;
+            gyro_baseline_y += current_data.gyro_y;
+            gyro_baseline_z += current_data.gyro_z;
+            baseline_samples++;
+            processed->vibration_intensity = 0.0f; // 校准期间振动强度为0
+        } else {
+            gyro_baseline_x /= 100.0f;
+            gyro_baseline_y /= 100.0f;
+            gyro_baseline_z /= 100.0f;
+            baseline_initialized = true;
+            printf("Gyro baseline calibrated: X=%.2f, Y=%.2f, Z=%.2f\n",
+                   gyro_baseline_x, gyro_baseline_y, gyro_baseline_z);
+        }
+    } else {
+        // 去除基线偏移
+        float filtered_gyro_x = current_data.gyro_x - gyro_baseline_x;
+        float filtered_gyro_y = current_data.gyro_y - gyro_baseline_y;
+        float filtered_gyro_z = current_data.gyro_z - gyro_baseline_z;
+
+        // 计算振动强度（角速度幅值）
+        float raw_intensity = sqrtf(filtered_gyro_x * filtered_gyro_x +
+                                   filtered_gyro_y * filtered_gyro_y +
+                                   filtered_gyro_z * filtered_gyro_z);
+
+        // 简单低通滤波（平滑处理）
+        static float last_intensity = 0.0f;
+        processed->vibration_intensity = 0.7f * last_intensity + 0.3f * raw_intensity;
+        last_intensity = processed->vibration_intensity;
+    }
 
     // 简单的变化率计算（需要历史数据进行更精确计算）
     static float last_accel_mag = 0.0f;
@@ -932,36 +1073,92 @@ static void EvaluateRisk(const ProcessedData *processed, RiskAssessment *assessm
     }
     total_risk_score += assessment->light_risk * 0.1f;
 
-    // 确定风险等级
+    // 滑坡监测安全逻辑：一旦触发中等以上风险，只能手动解除
+    static RiskLevel raw_level = RISK_LEVEL_SAFE;
+    static uint32_t level_start_time = 0;
+    // 使用全局的报警确认状态和风险状态变量（已在文件顶部声明）
+
+    // 根据分数确定原始风险等级
     if (total_risk_score >= 0.8f) {
-        assessment->level = RISK_LEVEL_CRITICAL;
-        strcpy(assessment->description, "Critical landslide risk");
+        raw_level = RISK_LEVEL_CRITICAL;
     } else if (total_risk_score >= 0.6f) {
-        assessment->level = RISK_LEVEL_HIGH;
-        strcpy(assessment->description, "High landslide risk");
+        raw_level = RISK_LEVEL_HIGH;
     } else if (total_risk_score >= 0.4f) {
-        assessment->level = RISK_LEVEL_MEDIUM;
-        strcpy(assessment->description, "Medium landslide risk");
+        raw_level = RISK_LEVEL_MEDIUM;
     } else if (total_risk_score >= 0.2f) {
-        assessment->level = RISK_LEVEL_LOW;
-        strcpy(assessment->description, "Low landslide risk");
+        raw_level = RISK_LEVEL_LOW;
     } else {
-        assessment->level = RISK_LEVEL_SAFE;
-        strcpy(assessment->description, "Safe conditions");
+        raw_level = RISK_LEVEL_SAFE;
+    }
+
+    uint32_t current_time = LOS_TickCountGet();
+
+    // 核心安全逻辑：一旦触发中等以上风险，系统进入"需要确认"状态
+    if (raw_level >= RISK_LEVEL_MEDIUM) {
+        // 触发中等以上风险
+        if (raw_level > max_triggered_level) {
+            max_triggered_level = raw_level;
+            printf("LANDSLIDE ALERT: Risk level %d triggered! Manual reset required.\n", raw_level);
+        }
+        confirmed_level = raw_level;
+        manual_reset_required = true;
+        g_alarm_acknowledged = false;  // 新风险需要重新确认
+        level_start_time = current_time;
+    } else if (manual_reset_required) {
+        // 当前检测值安全，但之前触发过中等以上风险
+        if (g_alarm_acknowledged) {
+            // 手动确认后，可以解除报警状态
+            confirmed_level = RISK_LEVEL_SAFE;
+            max_triggered_level = RISK_LEVEL_SAFE;
+            manual_reset_required = false;
+            g_alarm_acknowledged = false;
+            printf("MANUAL RESET: Risk status cleared by operator. Resuming normal monitoring.\n");
+        } else {
+            // 保持最后的风险等级，等待手动确认
+            confirmed_level = max_triggered_level;
+            printf("WAITING FOR RESET: Current reading safe, but manual confirmation required (triggered level: %d)\n",
+                   max_triggered_level);
+        }
+    } else {
+        // 正常监测状态，低风险可以自动变化
+        if (raw_level != confirmed_level) {
+            // 低风险之间的变化需要稳定3秒
+            if (level_start_time == 0) {
+                level_start_time = current_time;
+            } else if (current_time - level_start_time >= 3000) {
+                confirmed_level = raw_level;
+                level_start_time = current_time;
+                printf("NORMAL MONITORING: Risk level changed to %d\n", confirmed_level);
+            }
+        } else {
+            level_start_time = current_time;
+        }
+    }
+
+    // 设置最终评估结果
+    assessment->level = confirmed_level;
+
+    // 设置描述
+    switch (assessment->level) {
+        case RISK_LEVEL_CRITICAL:
+            strcpy(assessment->description, "Critical landslide risk - EVACUATE!");
+            break;
+        case RISK_LEVEL_HIGH:
+            strcpy(assessment->description, "High landslide risk - ALERT!");
+            break;
+        case RISK_LEVEL_MEDIUM:
+            strcpy(assessment->description, "Medium landslide risk - WARNING!");
+            break;
+        case RISK_LEVEL_LOW:
+            strcpy(assessment->description, "Low landslide risk - CAUTION");
+            break;
+        case RISK_LEVEL_SAFE:
+            strcpy(assessment->description, "Safe conditions");
+            break;
     }
 
     assessment->confidence = (total_risk_score > 1.0f) ? 1.0f : total_risk_score;
-    assessment->timestamp = LOS_TickCountGet();
-
-    // 更新持续时间
-    static RiskLevel last_level = RISK_LEVEL_SAFE;
-    static uint32_t level_start_time = 0;
-
-    if (assessment->level != last_level) {
-        level_start_time = assessment->timestamp;
-        last_level = assessment->level;
-    }
-
+    assessment->timestamp = current_time;
     assessment->duration_ms = assessment->timestamp - level_start_time;
 }
 
@@ -969,22 +1166,63 @@ static void EvaluateRisk(const ProcessedData *processed, RiskAssessment *assessm
  * @brief 按键事件处理函数
  * @param state 按键状态
  */
+
 static void ButtonEventHandler(ButtonState state)
 {
-    static bool muted = false;  // 移到函数开头
+    static bool muted = false;
+    static uint32_t press_start_time = 0;
+    static bool long_press_handled = false;
+    uint32_t current_time = LOS_TickCountGet();
 
     switch (state) {
+        case BUTTON_STATE_K3_PRESSED:
+        case BUTTON_STATE_K4_PRESSED:
+        case BUTTON_STATE_K5_PRESSED:
+        case BUTTON_STATE_K6_PRESSED:
+            // 按下时记录时间
+            press_start_time = current_time;
+            long_press_handled = false;
+            break;
+
+        case BUTTON_STATE_RELEASED:
+            // 释放时检查按压时长
+            if (press_start_time > 0 && !long_press_handled) {
+                uint32_t press_duration = current_time - press_start_time;
+                if (press_duration >= 3000) {
+                    // 超长按（3秒以上）：确认报警
+                    g_alarm_acknowledged = true;
+                    printf("=== MANUAL RESET CONFIRMED ===\n");
+                    printf("Operator acknowledged: Landslide risk has been manually cleared\n");
+                    printf("System returning to normal monitoring mode\n");
+                    printf("==============================\n");
+                } else if (press_duration >= 1000) {
+                    // 长按（1-3秒）：切换报警静音
+                    muted = !muted;
+                    SetAlarmMute(muted);
+                    printf("Button long press: Alarm %s\n", muted ? "muted" : "unmuted");
+                } else {
+                    // 短按（<1秒）：切换LCD显示模式
+                    SwitchLcdMode();
+                    printf("Button short press: LCD mode switched\n");
+                }
+                press_start_time = 0;
+            }
+            break;
+
         case BUTTON_STATE_SHORT_PRESS:
-            // 短按：切换LCD显示模式
+            // 兼容原有短按逻辑
             SwitchLcdMode();
             printf("Button short press: LCD mode switched\n");
             break;
 
         case BUTTON_STATE_LONG_PRESS:
-            // 长按：切换报警静音
-            muted = !muted;
-            SetAlarmMute(muted);
-            printf("Button long press: Alarm %s\n", muted ? "muted" : "unmuted");
+            // 兼容原有长按逻辑，但标记已处理避免重复
+            if (!long_press_handled) {
+                muted = !muted;
+                SetAlarmMute(muted);
+                printf("Button long press: Alarm %s\n", muted ? "muted" : "unmuted");
+                long_press_handled = true;
+            }
             break;
 
         default:
@@ -1024,7 +1262,11 @@ void LandslideMonitorExample(void)
 
     printf("=== Landslide Monitoring System Started Successfully ===\n");
     printf("System is now monitoring for landslide risks...\n");
-    printf("Press button: Short=Switch display, Long=Mute alarm\n");
+    printf("Button Controls:\n");
+    printf("  Short press (<1s): Switch LCD display mode\n");
+    printf("  Long press (1-3s): Mute/unmute alarm\n");
+    printf("  SUPER LONG press (3s+): MANUAL RESET - Clear landslide alert\n");
+    printf("SAFETY: Once medium+ risk triggered, manual reset required!\n");
 
     // 主循环 - 系统将在后台线程中运行
     while (GetSystemState() != SYSTEM_STATE_SHUTDOWN) {

@@ -19,6 +19,7 @@
 #include <math.h>
 #include "lcd_display.h"
 #include "lcd.h"       // 智能家居的LCD驱动头文件（已包含字库）
+#include "landslide_monitor.h"  // 添加以使用RiskAssessment和GetLatestRiskAssessment
 #include "iot_spi.h"
 #include "iot_gpio.h"
 #include "iot_errno.h"
@@ -473,20 +474,38 @@ void LCD_InitStaticLayout(void)
 }
 
 /**
- * @brief 设置风险等级显示 (移植自智能安防的lcd_set_auto_state)
+ * @brief 设置风险等级显示 (使用系统完整的风险评估)
  */
 void lcd_set_risk_level(const SensorData *data)
 {
-    float angle_magnitude = sqrtf(data->angle_x * data->angle_x + data->angle_y * data->angle_y);
+    // 获取系统的完整风险评估
+    extern int GetLatestRiskAssessment(RiskAssessment *assessment);
+    RiskAssessment assessment;
 
-    if (angle_magnitude < 5.0f) {
-        lcd_show_chinese(77, 204, (uint8_t *)"安全", LCD_GREEN, LCD_WHITE, 24, 0);
-    } else if (angle_magnitude < 10.0f) {
-        lcd_show_chinese(77, 204, (uint8_t *)"注意", LCD_YELLOW, LCD_WHITE, 24, 0);
-    } else if (angle_magnitude < 15.0f) {
-        lcd_show_chinese(77, 204, (uint8_t *)"警告", LCD_ORANGE, LCD_WHITE, 24, 0);
-    } else {
-        lcd_show_chinese(77, 204, (uint8_t *)"危险", LCD_RED, LCD_WHITE, 24, 0);
+    if (GetLatestRiskAssessment(&assessment) != 0) {
+        // 如果无法获取风险评估，显示未知状态
+        lcd_show_string(77, 204, (const uint8_t *)"Unknown", LCD_GRAY, LCD_WHITE, 24, 0);
+        return;
+    }
+
+    // 根据系统风险评估等级显示状态
+    switch (assessment.level) {
+        case RISK_LEVEL_SAFE:
+            lcd_show_chinese(77, 204, (uint8_t *)"安全", LCD_GREEN, LCD_WHITE, 24, 0);
+            break;
+        case RISK_LEVEL_LOW:
+            lcd_show_chinese(77, 204, (uint8_t *)"注意", LCD_YELLOW, LCD_WHITE, 24, 0);
+            break;
+        case RISK_LEVEL_MEDIUM:
+            lcd_show_chinese(77, 204, (uint8_t *)"警告", LCD_ORANGE, LCD_WHITE, 24, 0);
+            break;
+        case RISK_LEVEL_HIGH:
+        case RISK_LEVEL_CRITICAL:
+            lcd_show_chinese(77, 204, (uint8_t *)"危险", LCD_RED, LCD_WHITE, 24, 0);
+            break;
+        default:
+            lcd_show_string(77, 204, (const uint8_t *)"Error ", LCD_GRAY, LCD_WHITE, 24, 0);
+            break;
     }
 }
 
