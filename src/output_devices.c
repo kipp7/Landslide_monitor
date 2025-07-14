@@ -741,7 +741,10 @@ void Voice_PlayCustom(const char *text)
 
     IoTUartWrite(VOICE_UART_BUS, (unsigned char*)cmd, strlen(cmd));
 
-    printf("Voice: %s\n", text);
+    // 只在非安全状态时输出语音日志，减少日志噪音
+    if (strstr(text, "safe") == NULL) {
+        printf("Voice: %s\n", text);
+    }
 }
 
 /**

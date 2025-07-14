@@ -161,7 +161,7 @@ int DataCache_SendPending(void)
             }
         } else {
             // 尝试发送数据
-            printf("📡 发送缓存数据 (重试:%d/%d)\n", item->retry_count, MAX_RETRY_COUNT);
+            // 缓存数据发送日志已优化，减少输出频率
 
             if (mqtt_is_connected()) {
                 send_msg_to_mqtt(&item->data);
@@ -195,7 +195,7 @@ int DataCache_SendPending(void)
 
     if (sent_count > 0) {
         printf("✅ 缓存数据发送完成: %d条成功\n", sent_count);
-        DataCache_SaveToFile();  // 保存缓存状态
+        // DataCache_SaveToFile();  // 移除无用的简化实现调用
     }
 
     return sent_count;
@@ -380,8 +380,8 @@ void ConnectionStatus_Update(void)
                 printf("❌ WiFi重连请求失败，错误码: %d (SSID: %s)\n", result, WIFI_SSID);
             }
 
-            // 每20次重连显示一次状态提示（更频繁的状态报告）
-            if (wifi_reconnect_attempts % 20 == 0) {
+            // 每50次重连显示一次状态提示（减少日志频率）
+            if (wifi_reconnect_attempts % 50 == 0) {
                 printf("📊 WiFi重连状态: 已尝试%d次，继续重连中...\n", wifi_reconnect_attempts);
                 printf("   目标SSID: %s\n", WIFI_SSID);
                 printf("   请检查: 1.WiFi热点是否开启 2.信号强度是否足够 3.密码是否正确\n");
@@ -1226,8 +1226,7 @@ int IoTCloud_SendData(const LandslideIotData *data)
             printf("📤 发送了 %d 条缓存数据\n", sent_cached);
         }
 
-        // 然后发送当前数据
-        printf("📡 发送实时数据到云平台\n");
+        // 然后发送当前数据（减少日志输出）
         send_msg_to_mqtt(&iot_data);
         g_connection_status.last_data_send_time = LOS_TickCountGet();
         g_data_cache.total_sent++;

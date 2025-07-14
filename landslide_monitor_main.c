@@ -742,15 +742,19 @@ static void DisplayTask(void)
                                 LCD_UpdateStatusOnly(&sensor_data);
                             }
 
-                            printf("LCD: Data updated - Angle X=%.1f Y=%.1f, Temp=%.1f\n",
-                                   sensor_data.angle_x, sensor_data.angle_y, sensor_data.sht_temperature);
+                            // LCD数据更新日志已优化移除，减少日志噪音
                         }
                         break;
 
                     case LCD_MODE_RISK_STATUS:
                         // 风险状态模式：重绘整个界面
                         LCD_DisplayRiskStatus(&assessment);
-                        printf("LCD: Risk status updated - Level %d\n", assessment.level);
+                        // 只在风险等级变化时输出日志
+                        static int last_risk_level = -1;
+                        if (assessment.level != last_risk_level) {
+                            printf("🚨 风险等级变化: %d -> %d\n", last_risk_level, assessment.level);
+                            last_risk_level = assessment.level;
+                        }
                         break;
 
                     case LCD_MODE_TREND_CHART:
@@ -1320,10 +1324,10 @@ void LandslideMonitorExample(void)
         SystemStats stats;
         GetSystemStats(&stats);
 
-        // 每60秒打印一次系统状态
+        // 每120秒打印一次系统状态（减少频率）
         static uint32_t last_status_time = 0;
         uint32_t current_time = LOS_TickCountGet();
-        if (current_time - last_status_time > 60000) {
+        if (current_time - last_status_time > 120000) {
             printf("\n=== SYSTEM STATUS ===\n");
             printf("Uptime: %u seconds\n", stats.uptime_seconds);
             printf("Data samples: %u\n", stats.data_samples);
