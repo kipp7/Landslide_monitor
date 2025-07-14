@@ -645,7 +645,7 @@ static void RiskEvaluationTask(void)
             last_eval_time = current_time;
         }
 
-        LOS_Msleep(100);  // 100ms检查间隔
+        LOS_Msleep(50);   // 50ms检查间隔
     }
 
     printf("Risk evaluation task stopped\n");
@@ -742,15 +742,19 @@ static void DisplayTask(void)
                                 LCD_UpdateStatusOnly(&sensor_data);
                             }
 
-                            printf("LCD: Data updated - Angle X=%.1f Y=%.1f, Temp=%.1f\n",
-                                   sensor_data.angle_x, sensor_data.angle_y, sensor_data.sht_temperature);
+                            // LCD数据更新日志已优化移除，减少日志噪音
                         }
                         break;
 
                     case LCD_MODE_RISK_STATUS:
                         // 风险状态模式：重绘整个界面
                         LCD_DisplayRiskStatus(&assessment);
-                        printf("LCD: Risk status updated - Level %d\n", assessment.level);
+                        // 只在风险等级变化时输出日志
+                        static int last_risk_level = -1;
+                        if (assessment.level != last_risk_level) {
+                            printf("🚨 风险等级变化: %d -> %d\n", last_risk_level, assessment.level);
+                            last_risk_level = assessment.level;
+                        }
                         break;
 
                     case LCD_MODE_TREND_CHART:
@@ -785,7 +789,7 @@ static void DisplayTask(void)
             printf("Risk Level: %d\n", assessment.level);
         }
 
-        LOS_Msleep(200);  // 200ms检查间隔
+        LOS_Msleep(100);  // 100ms检查间隔
     }
 
     printf("Display task stopped\n");
@@ -841,22 +845,22 @@ static void AlarmTask(void)
         RiskAssessment current_risk;
         GetLatestRiskAssessment(&current_risk);
 
-        // 根据风险等级调整上传频率
+        // 根据风险等级调整上传频率（缩短间隔）
         switch (current_risk.level) {
             case RISK_LEVEL_SAFE:
-                upload_interval = 60000;    // 安全：60秒
+                upload_interval = 30000;    // 安全：30秒
                 break;
             case RISK_LEVEL_LOW:
-                upload_interval = 30000;    // 低风险：30秒
+                upload_interval = 15000;    // 低风险：15秒
                 break;
             case RISK_LEVEL_MEDIUM:
-                upload_interval = 10000;    // 中风险：10秒
+                upload_interval = 5000;     // 中风险：5秒
                 break;
             case RISK_LEVEL_HIGH:
-                upload_interval = 5000;     // 高风险：5秒
+                upload_interval = 3000;     // 高风险：3秒
                 break;
             case RISK_LEVEL_CRITICAL:
-                upload_interval = 2000;     // 危急：2秒
+                upload_interval = 1000;     // 危急：1秒
                 break;
         }
 
@@ -901,59 +905,11 @@ static void AlarmTask(void)
                 iot_data.motor_enabled = true;
                 iot_data.voice_enabled = true;
 
-                // 发送到云平台或存储到Flash
-                if (IoTCloud_IsConnected()) {
-                    // WiFi连接正常，直接上传
-                    if (IoTCloud_SendData(&iot_data) == 0) {
-                        last_iot_upload = current_time;
-                        printf("Data uploaded to cloud successfully\n");
-
-                        // 尝试上传之前缓存的数据
-                        static uint32_t last_cache_upload = 0;
-                        static uint32_t last_retry_upload = 0;
-                        static uint32_t last_health_check = 0;
-
-                        if (current_time - last_cache_upload >= 60000) {  // 每分钟尝试一次
-                            int uploaded = DataStorage_UploadCached();
-                            if (uploaded > 0) {
-                                printf("Uploaded %d cached records\n", uploaded);
-                            }
-                            last_cache_upload = current_time;
-                        }
-
-                        // 智能重试失败的上传
-                        if (current_time - last_retry_upload >= 30000) {  // 每30秒重试一次
-                            int retried = DataStorage_SmartRetryUpload();
-                            if (retried > 0) {
-                                printf("Retried %d failed uploads\n", retried);
-                            }
-                            last_retry_upload = current_time;
-                        }
-
-                        // 定期健康检查和清理
-                        if (current_time - last_health_check >= 300000) {  // 每5分钟检查一次
-                            DataStorage_GetHealthStatus();
-
-                            // 如果存储使用率超过80%，清理一些已上传的旧数据
-                            uint32_t pending_count = DataStorage_GetPendingCount();
-                            if (pending_count > 80) {  // 80%使用率
-                                int cleaned = DataStorage_CleanupUploaded(60);  // 保留60条记录
-                                if (cleaned > 0) {
-                                    printf("Cleaned %d uploaded records to free space\n", cleaned);
-                                }
-                            }
-
-                            last_health_check = current_time;
-                        }
-                    } else {
-                        printf("Failed to upload data, storing to Flash\n");
-                        DataStorage_Store(&iot_data);
-                    }
+                // 统一使用IoTCloud_SendData处理所有上传和缓存逻辑
+                if (IoTCloud_SendData(&iot_data) == 0) {
+                    last_iot_upload = current_time;
                 } else {
-                    // WiFi断开，存储到Flash
-                    printf("WiFi disconnected, storing data to Flash\n");
-                    DataStorage_Store(&iot_data);
-                    last_iot_upload = current_time;  // 更新时间，避免频繁存储
+                    printf("⚠️  数据发送失败，已自动处理缓存\n");
                 }
             }
         }
@@ -982,7 +938,7 @@ static void AlarmTask(void)
             g_alarm_acknowledged = false;  // 重置标志
         }
 
-        LOS_Msleep(500);  // 500ms检查间隔
+        LOS_Msleep(200);  // 200ms检查间隔
     }
 
     printf("Alarm task stopped\n");
@@ -1368,10 +1324,10 @@ void LandslideMonitorExample(void)
         SystemStats stats;
         GetSystemStats(&stats);
 
-        // 每60秒打印一次系统状态
+        // 每120秒打印一次系统状态（减少频率）
         static uint32_t last_status_time = 0;
         uint32_t current_time = LOS_TickCountGet();
-        if (current_time - last_status_time > 60000) {
+        if (current_time - last_status_time > 120000) {
             printf("\n=== SYSTEM STATUS ===\n");
             printf("Uptime: %u seconds\n", stats.uptime_seconds);
             printf("Data samples: %u\n", stats.data_samples);
@@ -1383,7 +1339,7 @@ void LandslideMonitorExample(void)
             last_status_time = current_time;
         }
 
-        LOS_Msleep(1000);  // 1秒检查间隔
+        LOS_Msleep(500);   // 500ms检查间隔
     }
 
     printf("=== Landslide Monitoring System Shutting Down ===\n");

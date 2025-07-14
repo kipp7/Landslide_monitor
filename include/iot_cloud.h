@@ -47,6 +47,14 @@ typedef struct {
     float temperature;      // 温度 (°C)
     float humidity;         // 湿度 (%)
     float light;           // 光照强度 (lux)
+
+    // MPU6050真实数据
+    float accel_x;         // X轴加速度 (m/s²)
+    float accel_y;         // Y轴加速度 (m/s²)
+    float accel_z;         // Z轴加速度 (m/s²)
+    float gyro_x;          // X轴陀螺仪 (°/s)
+    float gyro_y;          // Y轴陀螺仪 (°/s)
+    float gyro_z;          // Z轴陀螺仪 (°/s)
     float angle_x;         // X轴倾斜角度 (°)
     float angle_y;         // Y轴倾斜角度 (°)
     float angle_z;         // Z轴倾斜角度 (°)

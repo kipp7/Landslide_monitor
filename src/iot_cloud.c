@@ -349,25 +349,28 @@ int IoTCloud_SendData(const LandslideIotData *data)
         // MPU6050温度 - decimal(小数)
         cJSON_AddNumberToObject(pro_obj, "mpu_temperature", data->temperature);
 
-        // 加速度数据 - 使用角度数据转换为加速度近似值 (单位: mg, 1g = 1000mg)
-        // 角度转换为重力分量: sin(angle) * 1000mg
-        cJSON_AddNumberToObject(pro_obj, "acceleration_x", (long)(data->angle_x * 17.45));  // 角度*17.45 ≈ sin(角度)*1000
-        cJSON_AddNumberToObject(pro_obj, "acceleration_y", (long)(data->angle_y * 17.45));
-        cJSON_AddNumberToObject(pro_obj, "acceleration_z", (long)(1000));  // Z轴默认1g重力
+        // 加速度数据 - 使用MPU6050真实加速度数据 (单位: g, 华为云平台期望)
+        cJSON_AddNumberToObject(pro_obj, "acceleration_x", data->accel_x / 9.8);  // m/s² 转换为 g
+        cJSON_AddNumberToObject(pro_obj, "acceleration_y", data->accel_y / 9.8);
+        cJSON_AddNumberToObject(pro_obj, "acceleration_z", data->accel_z / 9.8);
 
-        // 陀螺仪数据 - 使用振动数据模拟 (单位: mdps, 度/秒*1000)
-        cJSON_AddNumberToObject(pro_obj, "gyroscope_x", (long)(data->vibration * 100));
-        cJSON_AddNumberToObject(pro_obj, "gyroscope_y", (long)(data->vibration * 100));
-        cJSON_AddNumberToObject(pro_obj, "gyroscope_z", (long)(data->vibration * 50));
+        // 陀螺仪数据 - 使用MPU6050真实陀螺仪数据 (单位: °/s, 华为云平台期望)
+        cJSON_AddNumberToObject(pro_obj, "gyroscope_x", data->gyro_x);  // 直接使用 °/s
+        cJSON_AddNumberToObject(pro_obj, "gyroscope_y", data->gyro_y);
+        cJSON_AddNumberToObject(pro_obj, "gyroscope_z", data->gyro_z);
 
-        // 添加刘天乐版本的额外字段
-        cJSON_AddNumberToObject(pro_obj, "ultrasonic_distance", -1);  // 暂无超声波传感器
-        cJSON_AddNumberToObject(pro_obj, "vibration", data->vibration);
+        // 倾角数据 - 山体滑坡监测的关键指标 (单位: 度)
+        cJSON_AddNumberToObject(pro_obj, "angle_x", data->angle_x);  // X轴倾角 (decimal)
+        cJSON_AddNumberToObject(pro_obj, "angle_y", data->angle_y);  // Y轴倾角 (decimal)
+        cJSON_AddNumberToObject(pro_obj, "angle_z", data->angle_z);  // Z轴倾角 (decimal)
 
-        // 添加系统状态信息（山体滑坡监测特有）
-        cJSON_AddNumberToObject(pro_obj, "risk_level", data->risk_level);
-        cJSON_AddNumberToObject(pro_obj, "alarm_active", data->alarm_active ? 1 : 0);
-        cJSON_AddNumberToObject(pro_obj, "uptime", data->uptime);
+        // 山体滑坡监测系统特有字段 (需要在华为云IoT平台添加对应属性定义)
+        cJSON_AddNumberToObject(pro_obj, "vibration", data->vibration);  // 振动强度 (decimal)
+        cJSON_AddNumberToObject(pro_obj, "risk_level", data->risk_level);  // 风险等级 (int, 0-4)
+        cJSON_AddNumberToObject(pro_obj, "alarm_active", data->alarm_active ? 1 : 0);  // 报警状态 (boolean)
+        cJSON_AddNumberToObject(pro_obj, "uptime", data->uptime);  // 运行时间 (long, 秒)
+
+        // 注意: 移除了ultrasonic_distance字段，因为硬件没有超声波传感器
 
         cJSON_AddItemToArray(serv_arr, arr_item);
 
