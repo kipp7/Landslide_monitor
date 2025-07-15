@@ -43,6 +43,7 @@ static void (*g_button_callback)(ButtonState state) = NULL;
 // 按键状态检测
 static ButtonState g_button_state = BUTTON_STATE_RELEASED;
 static uint32_t g_button_press_time = 0;
+static ButtonState g_last_pressed_button = BUTTON_STATE_RELEASED;
 
 /**
  * @brief 初始化所有输出设备
@@ -520,6 +521,88 @@ void Motor_Off(void)
     }
 }
 
+/**
+ * @brief 设置电机方向
+ * @param direction 电机方向
+ */
+void Motor_SetDirection(MotorDirection direction)
+{
+    if (!g_motor_initialized) {
+        return;
+    }
+
+    // 注意：这里的实现取决于具体的硬件连接
+    // 如果使用H桥驱动，需要控制方向引脚
+    // 目前的实现只是PWM控制，可能需要额外的GPIO控制方向
+
+    switch (direction) {
+        case MOTOR_DIRECTION_STOP:
+            printf("Motor direction: STOP\n");
+            Motor_Off();
+            break;
+        case MOTOR_DIRECTION_FORWARD:
+            printf("Motor direction: FORWARD\n");
+            // 如果有方向控制引脚，在这里设置
+            break;
+        case MOTOR_DIRECTION_REVERSE:
+            printf("Motor direction: REVERSE\n");
+            // 如果有方向控制引脚，在这里设置
+            break;
+        default:
+            printf("Motor direction: UNKNOWN\n");
+            break;
+    }
+}
+
+/**
+ * @brief 运行电机
+ * @param speed 速度 (0-100%)
+ * @param direction 方向
+ * @param duration_ms 持续时间 (毫秒，0表示持续运行)
+ */
+void Motor_Run(uint8_t speed, MotorDirection direction, uint32_t duration_ms)
+{
+    if (!g_motor_initialized) {
+        printf("Motor not initialized\n");
+        return;
+    }
+
+    printf("Motor run: Speed=%d%%, Direction=%s, Duration=%dms\n",
+           speed,
+           direction == MOTOR_DIRECTION_STOP ? "STOP" :
+           direction == MOTOR_DIRECTION_FORWARD ? "FORWARD" : "REVERSE",
+           duration_ms);
+
+    // 设置方向
+    Motor_SetDirection(direction);
+
+    if (direction == MOTOR_DIRECTION_STOP) {
+        Motor_Off();
+        return;
+    }
+
+    // 限制速度范围
+    if (speed > 100) speed = 100;
+    if (speed < 1) speed = 1;
+
+    // 将速度百分比转换为PWM占空比
+    // 为了避免占空比为0的问题，最小值设为1，最大值设为99
+    uint32_t duty_cycle = (speed * 98 / 100) + 1;  // 1-99范围
+
+    // 启动PWM
+    IoTPwmStart(MOTOR_PWM, duty_cycle, PWM_FREQ_HZ);
+
+    // 如果设置了持续时间，启动定时器
+    if (duration_ms > 0) {
+        printf("Motor will run for %d milliseconds\n", duration_ms);
+        // 这里可以启动一个定时器任务来停止电机
+        // 暂时使用简单的延时实现
+        LOS_Msleep(duration_ms);
+        Motor_Off();
+        printf("Motor stopped after %d milliseconds\n", duration_ms);
+    }
+}
+
 // ==================== 报警灯控制函数 ====================
 
 /**
@@ -623,11 +706,28 @@ void AlarmLight_Off(void)
 
 int Button_Init(void)
 {
-    printf("Button functionality disabled (hardware issues detected)\n");
-    printf("System will operate in automatic monitoring mode\n");
-    printf("Manual reset can be performed by system restart if needed\n");
+    printf("Initializing ADC button functionality...\n");
 
-    g_button_initialized = false;
+    // 初始化ADC通道
+    int ret = IoTAdcInit(BUTTON_ADC_CHANNEL);
+    if (ret != IOT_SUCCESS) {
+        printf("Button ADC initialization failed: %d\n", ret);
+        g_button_initialized = false;
+        return -1;
+    }
+
+    // 重置按键状态
+    g_button_state = BUTTON_STATE_RELEASED;
+    g_button_press_time = 0;
+    g_last_pressed_button = BUTTON_STATE_RELEASED;
+
+    printf("Button ADC initialized successfully on channel %d\n", BUTTON_ADC_CHANNEL);
+    printf("Button thresholds: K3[%d-%d], K6[%d-%d], K4[%d-%d], K5[%d-%d], Released[%d-%d]\n",
+           BUTTON_K3_MIN, BUTTON_K3_MAX, BUTTON_K6_MIN, BUTTON_K6_MAX,
+           BUTTON_K4_MIN, BUTTON_K4_MAX, BUTTON_K5_MIN, BUTTON_K5_MAX,
+           BUTTON_RELEASED_MIN, BUTTON_RELEASED_MAX);
+
+    g_button_initialized = true;
     return 0;
 }
 
@@ -637,8 +737,103 @@ int Button_Init(void)
  */
 ButtonState Button_GetState(void)
 {
-    // 按键功能已禁用，直接返回释放状态
-    return BUTTON_STATE_RELEASED;
+    if (!g_button_initialized) {
+        return BUTTON_STATE_RELEASED;
+    }
+
+    // 读取ADC值
+    unsigned int adc_value = 0;
+    int ret = IoTAdcGetVal(BUTTON_ADC_CHANNEL, &adc_value);
+    if (ret != IOT_SUCCESS) {
+        return BUTTON_STATE_RELEASED;
+    }
+
+    // 根据ADC值判断按键状态
+    ButtonState new_state = BUTTON_STATE_RELEASED;
+
+    if (adc_value >= BUTTON_K3_MIN && adc_value <= BUTTON_K3_MAX) {
+        new_state = BUTTON_STATE_K3_PRESSED;  // UP按键 - 手动重置
+    } else if (adc_value >= BUTTON_K6_MIN && adc_value <= BUTTON_K6_MAX) {
+        new_state = BUTTON_STATE_K6_PRESSED;  // RIGHT按键 - 预留功能
+    } else if (adc_value >= BUTTON_K4_MIN && adc_value <= BUTTON_K4_MAX) {
+        new_state = BUTTON_STATE_K4_PRESSED;  // DOWN按键 - 切换显示模式
+    } else if (adc_value >= BUTTON_K5_MIN && adc_value <= BUTTON_K5_MAX) {
+        new_state = BUTTON_STATE_K5_PRESSED;  // LEFT按键 - 静音/取消静音
+    } else if (adc_value >= BUTTON_RELEASED_MIN && adc_value <= BUTTON_RELEASED_MAX) {
+        new_state = BUTTON_STATE_RELEASED;
+    }
+
+    // 检测按键状态变化
+    if (new_state != g_button_state) {
+        if (new_state != BUTTON_STATE_RELEASED) {
+            // 按键按下 - 防抖动延时
+            LOS_Msleep(10);
+
+            // 再次读取确认
+            ret = IoTAdcGetVal(BUTTON_ADC_CHANNEL, &adc_value);
+            if (ret == IOT_SUCCESS) {
+                // 重新判断状态
+                ButtonState confirmed_state = BUTTON_STATE_RELEASED;
+                if (adc_value >= BUTTON_K3_MIN && adc_value <= BUTTON_K3_MAX) {
+                    confirmed_state = BUTTON_STATE_K3_PRESSED;
+                } else if (adc_value >= BUTTON_K6_MIN && adc_value <= BUTTON_K6_MAX) {
+                    confirmed_state = BUTTON_STATE_K6_PRESSED;
+                } else if (adc_value >= BUTTON_K4_MIN && adc_value <= BUTTON_K4_MAX) {
+                    confirmed_state = BUTTON_STATE_K4_PRESSED;
+                } else if (adc_value >= BUTTON_K5_MIN && adc_value <= BUTTON_K5_MAX) {
+                    confirmed_state = BUTTON_STATE_K5_PRESSED;
+                }
+
+                if (confirmed_state != BUTTON_STATE_RELEASED) {
+                    g_button_press_time = LOS_TickCountGet();
+                    g_last_pressed_button = confirmed_state;
+                    printf("Button pressed: ADC=%u, State=%d\n", adc_value, confirmed_state);
+
+                    // 调用回调函数
+                    if (g_button_callback != NULL) {
+                        g_button_callback(confirmed_state);
+                    }
+                    g_button_state = confirmed_state;
+                }
+            }
+        } else {
+            // 按键释放
+            if (g_last_pressed_button != BUTTON_STATE_RELEASED) {
+                printf("Button released: Previous=%d\n", g_last_pressed_button);
+
+                // 调用回调函数通知释放
+                if (g_button_callback != NULL) {
+                    g_button_callback(BUTTON_STATE_RELEASED);
+                }
+                g_last_pressed_button = BUTTON_STATE_RELEASED;
+            }
+            g_button_state = BUTTON_STATE_RELEASED;
+            g_button_press_time = 0;
+        }
+    }
+    // 检测K3按键长按（持续按下时检测）
+    else if (g_button_state == BUTTON_STATE_K3_PRESSED && g_button_press_time > 0) {
+        uint32_t current_time = LOS_TickCountGet();
+        uint32_t press_duration = current_time - g_button_press_time;
+
+        // 长按2秒后立即触发重启
+        if (press_duration >= 2000) {
+            printf("=== K3 LONG PRESS DETECTED ===\n");
+            printf("K3 held for >2s: Rebooting system immediately...\n");
+            printf("===============================\n");
+
+            // 立即执行系统重启
+            printf("Calling RebootDevice...\n");
+            RebootDevice(0);
+
+            // 重置按键状态，避免重复触发
+            g_button_state = BUTTON_STATE_RELEASED;
+            g_button_press_time = 0;
+            g_last_pressed_button = BUTTON_STATE_RELEASED;
+        }
+    }
+
+    return g_button_state;
 }
 
 /**
@@ -668,6 +863,15 @@ bool Button_IsPressed(void)
 void Button_SetCallback(void (*callback)(ButtonState state))
 {
     g_button_callback = callback;
+}
+
+/**
+ * @brief 检查按键是否已初始化
+ * @return true: 已初始化, false: 未初始化
+ */
+bool Button_IsInitialized(void)
+{
+    return g_button_initialized;
 }
 
 /**
@@ -780,3 +984,5 @@ void Alarm_Mute(bool mute)
         Motor_Off();
     }
 }
+
+

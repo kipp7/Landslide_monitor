@@ -45,10 +45,18 @@ void LCD_DisplayRiskStatus(const RiskAssessment *assessment);
 void LCD_DisplayTrendChart(const RiskAssessment *assessment);
 void LCD_DisplaySystemInfo(const SystemStats *stats);
 
-// 局部刷新功能
+// 局部刷新功能 - 实时数据模式
 void LCD_InitStaticLayout(void);
 void LCD_UpdateDataOnly(const SensorData *data);
 void LCD_UpdateStatusOnly(const SensorData *data);
+
+// 局部刷新功能 - 风险状态模式
+void LCD_InitRiskStatusLayout(void);
+void LCD_UpdateRiskStatusData(const RiskAssessment *assessment);
+
+// 局部刷新功能 - 趋势图模式
+void LCD_InitTrendChartLayout(void);
+void LCD_UpdateTrendChartData(const RiskAssessment *assessment);
 
 // 显示模式切换
 void LCD_SwitchMode(LcdDisplayMode mode);

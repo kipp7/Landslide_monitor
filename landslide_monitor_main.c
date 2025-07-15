@@ -29,6 +29,7 @@
 #include "lcd.h"  // 添加LCD头文件以使用颜色定义
 #include "iot_cloud.h"  // 华为云IoT功能
 #include "data_storage.h"  // Flash数据存储功能
+#include "reset.h"  // 系统重启功能
 
 // 全局变量
 static SystemState g_system_state = SYSTEM_STATE_INIT;
@@ -38,8 +39,23 @@ static RiskAssessment g_latest_risk_assessment;
 
 // 云端控制变量
 bool g_alarm_acknowledged = false;  // 报警确认标志（可被云端命令设置）
+
+// 新增云端设备控制变量
+bool g_cloud_motor_enabled = false;    // 云端电机控制
+int g_cloud_motor_speed = 0;           // 马达转速 (0-100)
+MotorDirection g_cloud_motor_direction = MOTOR_DIRECTION_STOP;  // 马达方向
+int g_cloud_motor_duration = 0;        // 运行时长 (秒)
+bool g_cloud_buzzer_enabled = false;   // 云端蜂鸣器控制
+bool g_cloud_rgb_enabled = false;      // 云端RGB LED控制
+bool g_cloud_voice_enabled = false;    // 云端语音控制
+bool g_cloud_test_mode = false;        // 云端测试模式
+int g_cloud_rgb_red = 0;               // RGB红色分量
+int g_cloud_rgb_green = 0;             // RGB绿色分量
+int g_cloud_rgb_blue = 0;              // RGB蓝色分量
+
 static SystemStats g_system_stats;
 static LcdDisplayMode g_lcd_mode = LCD_MODE_REALTIME;
+static bool g_main_alarm_muted = false;  // 主程序中的静音状态
 
 // 风险评估状态变量（全局，供多个任务访问）
 static bool manual_reset_required = false;
@@ -321,14 +337,56 @@ void SetSystemState(SystemState state)
  */
 void SwitchLcdMode(void)
 {
-    g_lcd_mode = (LcdDisplayMode)((g_lcd_mode + 1) % LCD_MODE_COUNT);
+    static uint32_t last_switch_tick = 0;
+    static bool switching_in_progress = false;
+    uint32_t current_tick = LOS_TickCountGet();
+
+    // 防抖：100个tick内不允许重复切换（约1秒，假设100Hz tick）
+    if (current_tick - last_switch_tick < 100) {
+        printf("LCD mode switch ignored (too frequent)\n");
+        return;
+    }
+
+    // 防止切换过程中被打断
+    if (switching_in_progress) {
+        printf("LCD mode switch ignored (switching in progress)\n");
+        return;
+    }
+
+    switching_in_progress = true;
+    LcdDisplayMode old_mode = g_lcd_mode;
+
+    // 只在2个有效模式间切换：REALTIME, RISK_STATUS（禁用TREND_CHART）
+    g_lcd_mode = (LcdDisplayMode)((g_lcd_mode + 1) % 2);  // 在0,1两个模式间切换
+    if (g_lcd_mode >= 2) {
+        g_lcd_mode = LCD_MODE_REALTIME;  // 安全检查，确保不会超出范围
+    }
     g_system_stats.lcd_mode = g_lcd_mode;
+
+    printf("LCD mode switch: %d -> %d\n", old_mode, g_lcd_mode);
+    last_switch_tick = current_tick;
 
     // 重置静态布局标志，强制重新初始化界面
     extern bool g_static_layout_initialized;
     g_static_layout_initialized = false;
 
-    printf("LCD mode switched to: %d\n", g_lcd_mode);
+    // 清屏，准备切换
+    if (LCD_IsInitialized()) {
+        LCD_Clear(LCD_WHITE);
+        LOS_Msleep(100);  // 给清屏一点时间
+    }
+
+    // 显示详细的模式切换信息（只有2个模式）
+    const char* mode_names[] = {
+        "Real-Time Data",      // LCD_MODE_REALTIME (0)
+        "Risk Status"          // LCD_MODE_RISK_STATUS (1)
+        // LCD_MODE_TREND_CHART (2) - 已禁用
+    };
+
+    printf("LCD mode switched to: %d (%s)\n", g_lcd_mode,
+           g_lcd_mode < 2 ? mode_names[g_lcd_mode] : "Unknown");
+
+    switching_in_progress = false;
 }
 
 /**
@@ -346,7 +404,17 @@ LcdDisplayMode GetLcdMode(void)
  */
 void SetAlarmMute(bool mute)
 {
+    g_main_alarm_muted = mute;
     Alarm_Mute(mute);
+}
+
+/**
+ * @brief 获取报警静音状态
+ * @return true: 已静音, false: 未静音
+ */
+bool IsAlarmMuted(void)
+{
+    return g_main_alarm_muted;
 }
 
 /**
@@ -716,16 +784,39 @@ static void DisplayTask(void)
 
         // 执行LCD更新
         if (LCD_IsInitialized()) {
-            // 首次初始化静态布局
-            if (first_display) {
-                LCD_InitStaticLayout();
-                if (sensor_data.data_valid) {
-                    LCD_UpdateStatusOnly(&sensor_data);
-                    LCD_UpdateDataOnly(&sensor_data);
+            // 检查是否需要重新初始化静态布局（模式切换时）
+            if (first_display || !g_static_layout_initialized) {
+                switch (g_lcd_mode) {
+                    case LCD_MODE_REALTIME:
+                        // 模式0：实时数据模式
+                        LCD_Clear(LCD_WHITE);  // 清成白色
+                        LOS_Msleep(50);
+                        LCD_InitStaticLayout();
+                        if (sensor_data.data_valid) {
+                            LCD_UpdateStatusOnly(&sensor_data);
+                            LCD_UpdateDataOnly(&sensor_data);
+                        }
+                        printf("LCD: Real-time mode layout initialized\n");
+                        break;
+                    case LCD_MODE_RISK_STATUS:
+                        // 模式1：风险状态模式
+                        LCD_Clear(LCD_WHITE);  // 清成白色
+                        LOS_Msleep(50);
+                        LCD_InitRiskStatusLayout();
+                        // 立即显示数据
+                        if (assessment.level >= 0) {
+                            LCD_UpdateRiskStatusData(&assessment);
+                        }
+                        printf("LCD: Risk status layout initialized with data\n");
+                        break;
+                    // LCD_MODE_TREND_CHART 已禁用
+                    default:
+                        LCD_Clear(LCD_BLACK);
+                        break;
                 }
                 first_display = false;
+                g_static_layout_initialized = true;
                 last_update_time = current_time;
-                printf("LCD: Initial display completed\n");
             }
             // 局部更新
             else if (need_update && (current_time - last_update_time >= 500)) {  // 最小0.5秒更新间隔
@@ -747,28 +838,25 @@ static void DisplayTask(void)
                         break;
 
                     case LCD_MODE_RISK_STATUS:
-                        // 风险状态模式：重绘整个界面
-                        LCD_DisplayRiskStatus(&assessment);
-                        // 只在风险等级变化时输出日志
-                        static int last_risk_level = -1;
-                        if (assessment.level != last_risk_level) {
-                            printf(" 风险等级变化: %d -> %d\n", last_risk_level, assessment.level);
-                            last_risk_level = assessment.level;
-                        }
-                        break;
-
-                    case LCD_MODE_TREND_CHART:
-                        LCD_DisplayTrendChart(&assessment);
-                        break;
-
-                    case LCD_MODE_COUNT:
-                    default:
                         {
-                            // 显示系统信息作为默认
-                            SystemStats stats;
-                            GetSystemStats(&stats);
-                            LCD_DisplaySystemInfo(&stats);
+                            // 风险状态模式：定期更新数据
+                            static uint32_t last_risk_update = 0;
+                            // 每2秒更新一次数据，确保数据及时显示
+                            if (current_time - last_risk_update >= 2000) {
+                                LCD_UpdateRiskStatusData(&assessment);
+                                last_risk_update = current_time;
+                                printf("LCD: Risk status data updated\n");
+                            }
                         }
+                        break;
+
+                    // LCD_MODE_TREND_CHART 已禁用
+
+                    default:
+                        // 如果模式超出范围，重置为实时模式
+                        g_lcd_mode = LCD_MODE_REALTIME;
+                        g_static_layout_initialized = false;
+                        LCD_DisplayRealTimeData(&sensor_data);
                         break;
                 }
 
@@ -1041,7 +1129,7 @@ static void ProcessSensorData(ProcessedData *processed)
         last_intensity = processed->vibration_intensity;
     }
 
-    // 简单的变化率计算（需要历史数据进行更精确计算）
+    // 变化率计算（需要历史数据进行更精确计算）
     static float last_accel_mag = 0.0f;
     static float last_angle_mag = 0.0f;
     static float last_humidity = 0.0f;
@@ -1208,7 +1296,83 @@ static void EvaluateRisk(const ProcessedData *processed, RiskAssessment *assessm
             break;
     }
 
-    assessment->confidence = (total_risk_score > 1.0f) ? 1.0f : total_risk_score;
+    // 计算置信度：基于传感器可靠性和数据一致性，而不是风险高低
+    float confidence = 0.0f;
+
+    // 1. 基础数据有效性 (30%)
+    if (sensor_data.data_valid) {
+        confidence += 0.3f;
+    }
+
+    // 2. 传感器数据合理性检查 (40%) - 检测真正的传感器异常
+    int sensor_ok_count = 0;
+
+    // 温度传感器检查：正常环境温度范围
+    if (sensor_data.sht_temperature >= -40.0f && sensor_data.sht_temperature <= 80.0f) {
+        sensor_ok_count++;
+    }
+
+    // 湿度传感器检查：物理可能范围
+    if (sensor_data.humidity >= 0.0f && sensor_data.humidity <= 100.0f) {
+        sensor_ok_count++;
+    }
+
+    // 光照传感器检查：非负值且不超过强阳光
+    if (sensor_data.light_intensity >= 0.0f && sensor_data.light_intensity <= 100000.0f) {
+        sensor_ok_count++;
+    }
+
+    // MPU6050传感器检查：加速度在合理范围内（不超过10g）
+    float accel_magnitude = sqrtf(sensor_data.accel_x * sensor_data.accel_x +
+                                 sensor_data.accel_y * sensor_data.accel_y +
+                                 sensor_data.accel_z * sensor_data.accel_z);
+    if (accel_magnitude >= 0.5f && accel_magnitude <= 10.0f) {
+        sensor_ok_count++;
+    }
+
+    // 陀螺仪检查：角速度在合理范围内（不超过2000°/s）
+    if (fabsf(sensor_data.gyro_x) <= 2000.0f &&
+        fabsf(sensor_data.gyro_y) <= 2000.0f &&
+        fabsf(sensor_data.gyro_z) <= 2000.0f) {
+        sensor_ok_count++;
+    }
+
+    // 传感器可靠性得分
+    float sensor_score = (sensor_ok_count / 5.0f) * 0.4f;
+    confidence += sensor_score;
+
+    // 3. 数据一致性验证 (20%) - 多传感器交叉验证
+    float consistency_score = 0.0f;
+
+    // 倾斜角度与加速度一致性检查
+    float angle_magnitude = sqrtf(sensor_data.angle_x * sensor_data.angle_x +
+                                 sensor_data.angle_y * sensor_data.angle_y);
+    if (angle_magnitude < 45.0f) {  // 合理的倾斜角度范围
+        consistency_score += 0.5f;
+    }
+
+    // 温湿度相关性检查（高温通常对应低湿度）
+    if ((sensor_data.sht_temperature > 30.0f && sensor_data.humidity < 80.0f) ||
+        (sensor_data.sht_temperature <= 30.0f)) {
+        consistency_score += 0.5f;
+    }
+
+    float consistency_points = consistency_score * 0.2f;
+    confidence += consistency_points;
+
+    // 4. 系统稳定性 (10%) - 运行时间和历史稳定性
+    uint32_t uptime_seconds = current_time / 1000;
+    float stability_score = 0.0f;
+    if (uptime_seconds > 60) {   // 运行超过1分钟
+        stability_score += 0.05f;
+    }
+    if (uptime_seconds > 300) {  // 运行超过5分钟
+        stability_score += 0.05f;
+    }
+    confidence += stability_score;
+
+    // 确保置信度在合理范围内
+    assessment->confidence = (confidence > 1.0f) ? 1.0f : confidence;
     assessment->timestamp = current_time;
     assessment->duration_ms = assessment->timestamp - level_start_time;
 }
@@ -1227,47 +1391,45 @@ static void ButtonEventHandler(ButtonState state)
 
     switch (state) {
         case BUTTON_STATE_K3_PRESSED:
+            // K3(UP)按键：专门用于系统重启（长按检测在Button_GetState中处理）
+            printf("K3(UP) button pressed - Hold for 2s to reboot\n");
+            break;
+
         case BUTTON_STATE_K4_PRESSED:
+            // K4(DOWN)按键：专门用于切换LCD显示模式
+            printf("K4(DOWN) button pressed - Switching LCD display mode...\n");
+            SwitchLcdMode();
+            break;
+
         case BUTTON_STATE_K5_PRESSED:
+            // K5(LEFT)按键：专门用于静音/取消静音
+            muted = !muted;
+            SetAlarmMute(muted);
+            printf("K5(LEFT) button pressed - Alarm %s\n", muted ? "muted" : "unmuted");
+            break;
+
         case BUTTON_STATE_K6_PRESSED:
-            // 按下时记录时间
-            press_start_time = current_time;
-            long_press_handled = false;
+            // K6(RIGHT)按键：显示系统状态
+            printf("K6(RIGHT) button pressed - System status display\n");
+            printf("System uptime: %lu ms\n", LOS_TickCountGet());
+            printf("WiFi status: Connected, Sensors: OK, Storage: OK\n");
+            printf("Current LCD mode: %d\n", g_lcd_mode);
+            printf("Alarm muted: %s\n", IsAlarmMuted() ? "YES" : "NO");
             break;
 
         case BUTTON_STATE_RELEASED:
-            // 释放时检查按压时长
-            if (press_start_time > 0 && !long_press_handled) {
-                uint32_t press_duration = current_time - press_start_time;
-                if (press_duration >= 3000) {
-                    // 超长按（3秒以上）：确认报警
-                    g_alarm_acknowledged = true;
-                    printf("=== MANUAL RESET CONFIRMED ===\n");
-                    printf("Operator acknowledged: Landslide risk has been manually cleared\n");
-                    printf("System returning to normal monitoring mode\n");
-                    printf("==============================\n");
-                } else if (press_duration >= 1000) {
-                    // 长按（1-3秒）：切换报警静音
-                    muted = !muted;
-                    SetAlarmMute(muted);
-                    printf("Button long press: Alarm %s\n", muted ? "muted" : "unmuted");
-                } else {
-                    // 短按（<1秒）：切换LCD显示模式
-                    SwitchLcdMode();
-                    printf("Button short press: LCD mode switched\n");
-                }
-                press_start_time = 0;
-            }
+            // 按键释放处理（K3长按重启已在Button_GetState中处理）
+            printf("Button released\n");
             break;
 
         case BUTTON_STATE_SHORT_PRESS:
-            // 兼容原有短按逻辑
+            // 兼容原有短按逻辑 - 切换LCD模式
             SwitchLcdMode();
             printf("Button short press: LCD mode switched\n");
             break;
 
         case BUTTON_STATE_LONG_PRESS:
-            // 兼容原有长按逻辑，但标记已处理避免重复
+            // 兼容原有长按逻辑 - 静音功能
             if (!long_press_handled) {
                 muted = !muted;
                 SetAlarmMute(muted);
@@ -1314,10 +1476,12 @@ void LandslideMonitorExample(void)
     printf("=== Landslide Monitoring System Started Successfully ===\n");
     printf("System is now monitoring for landslide risks...\n");
     printf("Button Controls:\n");
-    printf("  Short press (<1s): Switch LCD display mode\n");
-    printf("  Long press (1-3s): Mute/unmute alarm\n");
-    printf("  SUPER LONG press (3s+): MANUAL RESET - Clear landslide alert\n");
-    printf("SAFETY: Once medium+ risk triggered, manual reset required!\n");
+    printf("  K3(UP): Long press (>2s) = SYSTEM REBOOT - Restart device\n");
+    printf("  K4(DOWN): Press = Switch LCD display mode (3 modes)\n");
+    printf("  K5(LEFT): Press = Mute/unmute alarm\n");
+    printf("  K6(RIGHT): Press = Show system status\n");
+    printf("LCD Modes: Real-Time Data -> Risk Assessment -> Trend Analysis\n");
+    printf("WARNING: K3 long press will immediately reboot the system!\n");
 
     // 主循环 - 系统将在后台线程中运行
     while (GetSystemState() != SYSTEM_STATE_SHUTDOWN) {

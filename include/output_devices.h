@@ -45,7 +45,7 @@ extern "C" {
 #define ALARM_LIGHT_PIN             GPIO0_PA5   // 硬件设计的报警灯引脚
 
 // 功能按键配置（ADC模式，支持4个按键）
-#define BUTTON_ADC_CHANNEL          4                   // GPIO0_PC7对应ADC通道4
+#define BUTTON_ADC_CHANNEL          7                   // GPIO0_PC7对应ADC通道7
 
 // 4个按键的ADC阈值范围（基于官方例程b3_adc_key）
 // 参考官方文档：无按键>3.2V, K3≈10mv, K4≈1V, K5≈1.65V, K6≈0.55V
@@ -99,10 +99,10 @@ typedef enum {
 // 按键状态（支持4个按键）
 typedef enum {
     BUTTON_STATE_RELEASED = 0,      // 释放
-    BUTTON_STATE_K3_PRESSED,        // K3按键按下（手动重置）
-    BUTTON_STATE_K4_PRESSED,        // K4按键按下（切换显示模式）
-    BUTTON_STATE_K5_PRESSED,        // K5按键按下（静音/取消静音）
-    BUTTON_STATE_K6_PRESSED,        // K6按键按下（预留功能）
+    BUTTON_STATE_K3_PRESSED,        // K3(UP)按键按下（长按>2s立即系统重启）
+    BUTTON_STATE_K4_PRESSED,        // K4(DOWN)按键按下（切换LCD显示模式）
+    BUTTON_STATE_K5_PRESSED,        // K5(LEFT)按键按下（静音/取消静音）
+    BUTTON_STATE_K6_PRESSED,        // K6(RIGHT)按键按下（显示系统状态）
     BUTTON_STATE_SHORT_PRESS,       // 短按（兼容）
     BUTTON_STATE_LONG_PRESS         // 长按（兼容）
 } ButtonState;
@@ -147,6 +147,8 @@ void Motor_SetSpeed(uint8_t speed);          // 0-100%
 void Motor_Vibrate(uint32_t duration_ms);
 void Motor_VibrateByRisk(RiskLevel risk_level);
 void Motor_Off(void);
+void Motor_SetDirection(MotorDirection direction);
+void Motor_Run(uint8_t speed, MotorDirection direction, uint32_t duration_ms);
 
 // 报警灯控制
 int AlarmLight_Init(void);

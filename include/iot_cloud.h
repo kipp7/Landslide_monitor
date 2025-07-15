@@ -24,24 +24,22 @@
 extern "C" {
 #endif
 
-// 华为云IoT平台配置（基于华为云iot配置.txt成熟版本）
+// 华为云IoT平台配置（修复设备ID匹配问题）
 #define MQTT_DEVICES_PWD "8ebe8b17e8464208b73064df53d68e15f7ab038713ab3ef6a1996227e63ae45e"
 #define HOST_ADDR "361017cfc6.st1.iotda-device.cn-north-4.myhuaweicloud.com"
-#define HOST_PORT 1883  // MQTT标准端口（基于参考配置）
-#define DEVICE_ID "6815a14f9314d118511807c6_rk2206_0_0_2025070314"
+#define HOST_PORT 1883  // MQTT标准端口
+#define DEVICE_ID "6815a14f9314d118511807c6_rk2206"  // 修复：使用华为云平台上的正确设备ID
 #define DEVICE_USERNAME "6815a14f9314d118511807c6_rk2206"
+#define CLIENT_ID "6815a14f9314d118511807c6_rk2206_0_0_2025070314"  // MQTT连接使用的ClientID
 
+// MQTT主题定义
 #define PUBLISH_TOPIC "$oc/devices/" DEVICE_ID "/sys/properties/report"
 #define SUBSCRIBE_TOPIC "$oc/devices/" DEVICE_ID "/sys/commands/+"
+#define RESPONSE_TOPIC "$oc/devices/" DEVICE_ID "/sys/commands/response"
 
 // WiFi配置（基于用户偏好设置）
 #define WIFI_SSID "188"
 #define WIFI_PASSWORD "88888888"
-
-// MQTT主题定义
-#define PUBLISH_TOPIC "$oc/devices/" DEVICE_ID "/sys/properties/report"
-#define SUBCRIB_TOPIC "$oc/devices/" DEVICE_ID "/sys/commands/+"
-#define RESPONSE_TOPIC "$oc/devices/" DEVICE_ID "/sys/commands/response"
 
 // 兼容性数据结构（原有的LandslideIotData）
 typedef struct {
@@ -132,6 +130,16 @@ void IoTNetworkTask(void);
 void IoTCloud_ProcessCommand(const char *command_name, const char *payload);
 void IoTCloud_HandleResetCommand(void);
 void IoTCloud_HandleConfigCommand(const char *config_data);
+
+// 新增设备控制命令处理函数
+void IoTCloud_HandleMotorCommand(bool enable, int speed, int direction, int duration);
+void IoTCloud_HandleBuzzerCommand(bool enable);
+void IoTCloud_HandleRGBCommand(bool enable, int red, int green, int blue);
+void IoTCloud_HandleVoiceCommand(bool enable);
+void IoTCloud_HandleSystemRebootCommand(void);
+void IoTCloud_HandleConfigUpdateCommand(const char *config_json);
+void IoTCloud_HandleCalibrationCommand(void);
+void IoTCloud_HandleTestModeCommand(bool enable);
 
 // 数据缓存和重发配置
 #define MAX_CACHE_SIZE 100              // 最大缓存数据条数

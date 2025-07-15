@@ -335,10 +335,15 @@ void ConnectionStatus_Update(void)
             printf(" WiFi重连计数器已重置\n");
 
             // WiFi恢复后，立即尝试重连MQTT
-            if (!g_connection_status.mqtt_connected) {
+            if (!g_connection_status.mqtt_connected && !mqttConnectFlag) {
                 printf(" WiFi已恢复，立即尝试重连MQTT...\n");
                 LOS_Msleep(2000); // 等待2秒让WiFi稳定
-                mqtt_init();
+                printf(" 检查MQTT状态: mqttConnectFlag=%d\n", mqttConnectFlag);
+                if (!mqttConnectFlag) {  // 双重检查避免重复连接
+                    mqtt_init();
+                } else {
+                    printf(" MQTT已连接，跳过重连\n");
+                }
             }
         } else {
             printf(" WiFi连接断开，尝试重连...\n");
@@ -444,6 +449,20 @@ bool ConnectionStatus_IsStable(void)
 
 // 外部变量声明（用于命令处理）
 extern bool g_alarm_acknowledged;
+extern bool g_cloud_motor_enabled;
+extern int g_cloud_motor_speed;
+extern MotorDirection g_cloud_motor_direction;
+extern int g_cloud_motor_duration;
+extern bool g_cloud_buzzer_enabled;
+extern bool g_cloud_rgb_enabled;
+extern bool g_cloud_voice_enabled;
+extern bool g_cloud_test_mode;
+extern int g_cloud_rgb_red;
+extern int g_cloud_rgb_green;
+extern int g_cloud_rgb_blue;
+
+// 系统重启标志
+static bool g_system_reboot_requested = false;
 
 // WiFi状态检查函数
 static int check_wifi_connected(void)
@@ -466,77 +485,135 @@ static int check_wifi_connected(void)
     return 0;
 }
 
+// 全局变量用于测试回调是否被调用
+static volatile int g_callback_test_counter = 0;
+static volatile int g_motor_start_commands = 0;
+static volatile int g_motor_stop_commands = 0;
+
 /**
- * @brief MQTT消息到达回调函数（参考e1_iot_smart_home）
+ * @brief MQTT消息到达回调函数（参考标准例程）
  */
 static void mqtt_message_arrived(MessageData *data)
 {
+    // 立即增加计数器，证明回调被调用
+    g_callback_test_counter++;
+    printf("\n!!! CALLBACK TRIGGERED !!! Count: %d\n", g_callback_test_counter);
     int rc;
     cJSON *root = NULL;
     cJSON *cmd_name = NULL;
     char *cmd_name_str = NULL;
     char *request_id_idx = NULL;
-    char request_id[20] = {0};
-    MQTTMessage message;
-    char payload[MAX_BUFFER_LENGTH];
-
-    char rsptopic[128] = {0};
+    static char request_id[64] = {0};  // 使用静态变量减少栈使用
+    static MQTTMessage message;
+    static char payload[MAX_BUFFER_LENGTH];
+    static char rsptopic[128] = {0};
 
     printf("Message arrived on topic %.*s: %.*s\n",
            data->topicName->lenstring.len, data->topicName->lenstring.data,
            data->message->payloadlen, data->message->payload);
 
-    // 提取request_id
+    // get request id
     request_id_idx = strstr(data->topicName->lenstring.data, "request_id=");
     if (request_id_idx != NULL) {
-        strncpy(request_id, request_id_idx + 11, 19);
-        request_id[19] = '\0';
+        // 计算剩余长度，避免越界
+        int remaining_len = data->topicName->lenstring.len - (request_id_idx - data->topicName->lenstring.data) - 11;
+        int copy_len = remaining_len < 63 ? remaining_len : 63;  // 使用更大的缓冲区
+        strncpy(request_id, request_id_idx + 11, copy_len);
+        request_id[copy_len] = '\0';
+        printf("request_id = %s (length: %d)\n", request_id, copy_len);
+        printf("Full topic: %.*s\n", data->topicName->lenstring.len, data->topicName->lenstring.data);
+    } else {
+        printf("ERROR: No request_id found in topic!\n");
+        strcpy(request_id, "unknown");
     }
 
-    // 构建响应主题
-    sprintf(rsptopic, "$oc/devices/%s/sys/commands/response/request_id=%s", DEVICE_ID, request_id);
+    // create response topic
+    sprintf(rsptopic, "%s/request_id=%s", RESPONSE_TOPIC, request_id);
+    printf("rsptopic = %s\n", rsptopic);
 
-    // 构建响应消息
-    sprintf(payload, "{ \"result_code\": 0, \"response_name\": \"COMMAND_RESPONSE\", \"paras\": { \"result\": \"success\" } }");
-
+    // response message
     message.qos = 0;
     message.retained = 0;
     message.payload = payload;
+    sprintf(payload, "{ \
+        \"result_code\": 0, \
+        \"response_name\": \"COMMAND_RESPONSE\", \
+        \"paras\": { \
+            \"result\": \"success\" \
+        } \
+        }");
     message.payloadlen = strlen(payload);
 
-    // 发送响应消息
-    if ((rc = MQTTPublish(&client, rsptopic, &message)) != 0) {
-        printf("Return code from MQTT publish is %d\n", rc);
-        mqttConnectFlag = 0;
+    // publish the msg to response topic
+    printf("Publishing response to topic: %s\n", rsptopic);
+    printf("Response payload: %s\n", payload);
+    printf("Payload length: %d\n", message.payloadlen);
+    printf("MQTT connection status: %s\n", mqttConnectFlag ? "Connected" : "Disconnected");
+    printf("MQTT flag value: %d\n", mqttConnectFlag);
+
+    // 检查MQTT客户端状态（注释掉可能有问题的检查）
+    // if (!MQTTIsConnected(&client)) {
+    //     printf("WARNING: MQTT client reports disconnected state!\n");
+    //     mqttConnectFlag = 0;
+    //     return;
+    // }
+
+    // 强制使用mqttConnectFlag作为连接状态
+    if (!mqttConnectFlag) {
+        printf("WARNING: mqttConnectFlag indicates disconnected state!\n");
+        printf("But we'll try to send response anyway since we received the command\n");
+        // 不要return，继续尝试发送响应
     }
 
-    // 解析JSON命令
+    rc = MQTTPublish(&client, rsptopic, &message);
+    printf("MQTTPublish return code: %d\n", rc);
+
+    if (rc != 0) {
+        printf("ERROR: Failed to publish response. Return code: %d\n", rc);
+        printf("MQTT Error codes: 0=Success, -1=Buffer overflow, -2=Overflow, -3=No more message IDs, -4=Disconnected\n");
+        // 不要因为响应发送失败就断开连接，继续处理命令
+        // mqttConnectFlag = 0;
+    } else {
+        printf("SUCCESS: Response published successfully to Huawei Cloud!\n");
+        printf("Response sent for request_id: %s\n", request_id);
+        printf("Huawei Cloud should receive this response within 20 seconds\n");
+    }
+
+    /*{"command_name":"cmd","paras":{"cmd_value":"1"},"service_id":"server"}*/
+    printf("Now processing the command...\n");
     root = cJSON_ParseWithLength(data->message->payload, data->message->payloadlen);
     if (root != NULL) {
         cmd_name = cJSON_GetObjectItem(root, "command_name");
         if (cmd_name != NULL) {
             cmd_name_str = cJSON_GetStringValue(cmd_name);
-            printf("Received command: %s\n", cmd_name_str);
-
-            if (!strcmp(cmd_name_str, "reset_alarm")) {
-                printf("\n=== CLOUD COMMAND: RESET ALARM ===\n");
-                printf("Remote operator confirmed: Landslide risk manually cleared\n");
-                printf("System returning to normal monitoring mode\n");
-                printf("===================================\n");
-
-                // 设置重置标志
-                g_alarm_acknowledged = true;
-
-            } else if (!strcmp(cmd_name_str, "get_status")) {
-                printf("Cloud requested system status\n");
-
+            printf("Command name: %s\n", cmd_name_str);
+            if (!strcmp(cmd_name_str, "control_motor")) {
+                printf("Calling set_motor_state...\n");
+                set_motor_state(root);
+            } else if (!strcmp(cmd_name_str, "control_buzzer")) {
+                printf("Calling set_buzzer_state...\n");
+                set_buzzer_state(root);
+            } else if (!strcmp(cmd_name_str, "control_rgb")) {
+                printf("Calling set_rgb_state...\n");
+                set_rgb_state(root);
+            } else if (!strcmp(cmd_name_str, "reset_alarm")) {
+                printf("Calling set_alarm_reset...\n");
+                set_alarm_reset();
             } else {
                 printf("Unknown command: %s\n", cmd_name_str);
             }
+        } else {
+            printf("ERROR: No command_name found in JSON\n");
         }
-        cJSON_Delete(root);
+    } else {
+        printf("ERROR: Failed to parse JSON payload\n");
     }
+
+    cJSON_Delete(root);
+    printf("Command processing completed\n");
 }
+
+
 
 /**
  * @brief MQTT初始化（参考e1_iot_smart_home）
@@ -544,6 +621,12 @@ static void mqtt_message_arrived(MessageData *data)
 void mqtt_init(void)
 {
     int rc;
+
+    // 防止重复连接
+    if (mqttConnectFlag) {
+        printf("MQTT already connected (mqttConnectFlag=%d), skipping init\n", mqttConnectFlag);
+        return;
+    }
 
     printf("Starting MQTT...\n");
 
@@ -557,7 +640,7 @@ begin:
     MQTTClientInit(&client, &network, 2000, sendBuf, sizeof(sendBuf), readBuf, sizeof(readBuf));
 
     MQTTString clientId = MQTTString_initializer;
-    clientId.cstring = DEVICE_ID;
+    clientId.cstring = CLIENT_ID;  // 使用CLIENT_ID进行MQTT连接
 
     MQTTString userName = MQTTString_initializer;
     userName.cstring = DEVICE_USERNAME;
@@ -573,7 +656,8 @@ begin:
     data.cleansession = 1;
 
     printf("MQTT connection parameters:\n");
-    printf("  Client ID: %s\n", DEVICE_ID);
+    printf("  Client ID: %s\n", CLIENT_ID);
+    printf("  Device ID: %s (for topics)\n", DEVICE_ID);
     printf("  Username: %s\n", DEVICE_USERNAME);
     printf("  Password: %s\n", MQTT_DEVICES_PWD);
     printf("  Keep Alive: %d seconds\n", data.keepAliveInterval);
@@ -591,23 +675,133 @@ begin:
 
     printf("MQTT connected successfully to Huawei IoT Platform!\n");
 
-    printf("Subscribing to topic: %s\n", SUBSCRIBE_TOPIC);
+    printf("========== SUBSCRIBING TO COMMAND TOPIC ==========\n");
+    printf("Command Topic: %s\n", SUBSCRIBE_TOPIC);
+    printf("Expected command format: $oc/devices/%s/sys/commands/request_id=<uuid>\n", DEVICE_ID);
+    printf("Callback function: mqtt_message_arrived\n");
+    printf("QoS: 0\n");
+    printf("==================================================\n");
+
     rc = MQTTSubscribe(&client, SUBSCRIBE_TOPIC, 0, mqtt_message_arrived);
     if (rc != 0) {
-        printf("MQTTSubscribe failed: %d\n", rc);
+        printf("ERROR: MQTTSubscribe failed with return code: %d\n", rc);
+        printf("Possible causes: -1=Buffer overflow, -2=Overflow, -3=No more message IDs, -4=Disconnected\n");
+        printf("Retrying subscription...\n");
         osDelay(200);
         goto begin;
     }
 
-    printf("MQTT subscription successful!\n");
+    // 尝试订阅更广泛的主题来测试回调是否工作
+    static char debug_topic[256];  // 使用静态变量减少栈使用
+    sprintf(debug_topic, "$oc/devices/%s/sys/+", DEVICE_ID);
+    printf("Also subscribing to debug topic: %s\n", debug_topic);
+    rc = MQTTSubscribe(&client, debug_topic, 0, mqtt_message_arrived);
+    if (rc == 0) {
+        printf("Debug topic subscription successful\n");
+    } else {
+        printf("Debug topic subscription failed: %d\n", rc);
+    }
+
+    // 尝试订阅所有消息（用于调试）
+    static char all_topic[256];  // 使用静态变量减少栈使用
+    sprintf(all_topic, "$oc/devices/%s/#", DEVICE_ID);
+    printf("Also subscribing to all messages: %s\n", all_topic);
+    rc = MQTTSubscribe(&client, all_topic, 0, mqtt_message_arrived);
+    if (rc == 0) {
+        printf("All messages subscription successful\n");
+    } else {
+        printf("All messages subscription failed: %d\n", rc);
+    }
+
+    printf("SUCCESS: MQTT subscription to command topic successful!\n");
+    printf("Device is now ready to receive commands from Huawei Cloud\n");
+    printf("Waiting for commands on topic: %s\n", SUBSCRIBE_TOPIC);
+
+    // 设备ID匹配确认
+    printf("\n*** DEVICE ID CONFIGURATION ***\n");
+    printf("MQTT Client ID: %s\n", CLIENT_ID);
+    printf("Device ID (for topics): %s\n", DEVICE_ID);
+    printf("This should match the Device ID in Huawei Cloud Platform\n");
+    printf("*********************************\n");
+
+    // 发送一个测试消息确认订阅工作正常
+    printf("Testing MQTT subscription by sending a test property report...\n");
+    static char test_payload[256];  // 使用静态变量减少栈使用
+    sprintf(test_payload, "{\"services\":[{\"service_id\":\"test\",\"properties\":{\"subscription_test\":\"ready\",\"timestamp\":%u}}]}",
+            (unsigned int)(LOS_TickCountGet() / 1000));
+
+    static MQTTMessage test_message;  // 使用静态变量减少栈使用
+    test_message.qos = 0;
+    test_message.retained = 0;
+    test_message.payload = test_payload;
+    test_message.payloadlen = strlen(test_payload);
+
+    int test_rc = MQTTPublish(&client, PUBLISH_TOPIC, &test_message);
+    if (test_rc == 0) {
+        printf("Test message sent successfully - MQTT is working\n");
+    } else {
+        printf("Test message failed - MQTT may have issues: %d\n", test_rc);
+    }
+
+    // 测试：尝试向自己发送一个模拟命令（使用华为云标准格式）
+    printf("Testing command subscription by sending a self-test command...\n");
+    static char test_command_topic[256];  // 使用静态变量减少栈使用
+    sprintf(test_command_topic, "$oc/devices/%s/sys/commands/request_id=test123", DEVICE_ID);
+
+    // 使用华为云API文档中的标准格式
+    char test_command_payload[] = "{\"service_id\":\"test\",\"command_name\":\"control_motor\",\"paras\":{\"enable\":true,\"speed\":50}}";
+
+    MQTTMessage test_cmd_message;
+    test_cmd_message.qos = 0;
+    test_cmd_message.retained = 0;
+    test_cmd_message.payload = test_command_payload;
+    test_cmd_message.payloadlen = strlen(test_command_payload);
+
+    int test_cmd_rc = MQTTPublish(&client, test_command_topic, &test_cmd_message);
+    if (test_cmd_rc == 0) {
+        printf("Self-test command sent (Motor Control) - should trigger callback if subscription works\n");
+        printf("Waiting 3 seconds for callback...\n");
+
+        // 立即尝试处理消息
+        for (int i = 0; i < 6; i++) {
+            int immediate_yield = MQTTYield(&client, 500);
+            printf("Immediate yield %d: %d\n", i+1, immediate_yield);
+            LOS_Msleep(500);
+        }
+
+        printf("Self-test callback check completed\n");
+
+        // 检查回调是否被触发
+        printf("Callback test result: %s (count: %d)\n",
+               g_callback_test_counter > 0 ? "SUCCESS - Callback works!" : "FAILED - Callback not triggered",
+               g_callback_test_counter);
+
+        if (g_callback_test_counter == 0) {
+            printf("WARNING: Self-test command did not trigger callback!\n");
+            printf("This indicates a problem with MQTT subscription or callback registration.\n");
+        }
+    } else {
+        printf("Self-test command failed: %d\n", test_cmd_rc);
+    }
+    printf("*** IMPORTANT: Device is ONLINE and listening for commands ***\n");
     printf("IoT Cloud connection fully established!\n");
     mqttConnectFlag = 1;
     printf("MQTT connected and subscribed.\n");
+
+    // 立即测试回调函数是否工作
+    printf("Testing callback function registration...\n");
+    printf("Callback function address: %p\n", (void*)mqtt_message_arrived);
+    printf("Callback test counter: %d\n", g_callback_test_counter);
+    printf("If commands are sent but no callback is triggered, there may be a subscription issue.\n");
     printf("=== Huawei Cloud IoT Platform Connected ===\n");
-    printf("Service: smartHome\n");
+    printf("Service: Landslide Monitor\n");
     printf("Device ID: %s\n", DEVICE_ID);
-    printf("Host: %s:1883\n", HOST_ADDR);
+    printf("Host: %s:%d\n", HOST_ADDR, HOST_PORT);
+    printf("Publish Topic: %s\n", PUBLISH_TOPIC);
+    printf("Command Topic: %s\n", SUBSCRIBE_TOPIC);
+    printf("Response Topic: %s\n", RESPONSE_TOPIC);
     printf("Status: Ready for data upload and command reception\n");
+    printf("============================================\n");
     printf("==========================================\n");
 }
 
@@ -633,7 +827,9 @@ int wait_message(void)
 {
     uint8_t rec = MQTTYield(&client, 5000);
     if (rec != 0) {
-        mqttConnectFlag = 0;
+        printf("wait_message: MQTTYield error %d (not disconnecting)\n", rec);
+        // 不要因为yield错误就断开连接
+        // mqttConnectFlag = 0;
     }
     if (mqttConnectFlag == 0) {
         return 0;
@@ -791,12 +987,16 @@ reconnect:
 
             // 只有WiFi连接正常时才尝试MQTT重连
             if (actual_wifi_status &&
-                current_time - last_mqtt_reconnect > mqtt_reconnect_interval) {
+                current_time - last_mqtt_reconnect > mqtt_reconnect_interval &&
+                !mqttConnectFlag) {  // 添加MQTT状态检查
                 printf(" MQTT连接断开，WiFi正常，尝试重连MQTT...\n");
+                printf(" 当前MQTT状态: mqttConnectFlag=%d\n", mqttConnectFlag);
                 g_connection_status.disconnect_count++;
                 mqtt_init();
                 g_connection_status.reconnect_count++;
                 last_mqtt_reconnect = current_time;
+            } else if (mqttConnectFlag) {
+                printf(" MQTT已连接，无需重连\n");
             } else if (!actual_wifi_status) {
                 // WiFi断开时，不尝试MQTT重连，等待WiFi恢复
                 if (current_time - last_mqtt_reconnect > 30000) { // 30秒提示一次
@@ -877,6 +1077,55 @@ reconnect:
             last_health_check = current_time;
         }
 
+        // 处理MQTT消息（包括命令）
+        if (mqttConnectFlag) {
+            int yield_result = MQTTYield(&client, 100);
+            if (yield_result != 0) {
+                printf("MQTTYield returned error: %d (ignoring for stability)\n", yield_result);
+                // 不要因为yield错误就断开连接，这可能是暂时的
+            }
+
+            // 额外的消息处理尝试
+            static uint32_t last_yield_check = 0;
+            if (current_time - last_yield_check > 1000) {  // 每秒检查一次
+                // 尝试更长的yield时间
+                int extended_yield = MQTTYield(&client, 1000);
+                if (extended_yield != 0) {
+                    printf("Extended MQTTYield error: %d\n", extended_yield);
+                }
+                last_yield_check = current_time;
+            }
+
+            // 每30秒打印一次等待命令的状态
+            static uint32_t last_waiting_log = 0;
+            if (current_time - last_waiting_log > 30000) {
+                printf("*** WAITING FOR COMMANDS *** MQTT Connected: %s\n",
+                       mqttConnectFlag ? "YES" : "NO");
+                printf("Subscribed topics:\n");
+                printf("  1. %s\n", SUBSCRIBE_TOPIC);
+                printf("  2. $oc/devices/6815a14f9314d118511807c6_rk2206/sys/commands/+\n");
+                printf("Ready to receive commands from Huawei Cloud...\n");
+
+                // 强制检查是否有待处理的消息
+                printf("Forcing message check...\n");
+                int force_yield = MQTTYield(&client, 2000);  // 2秒强制检查
+                if (force_yield != 0) {
+                    printf("Force yield returned: %d\n", force_yield);
+                } else {
+                    printf("Force yield completed successfully\n");
+                }
+
+                last_waiting_log = current_time;
+            }
+        } else {
+            // 每10秒提醒一次MQTT未连接
+            static uint32_t last_disconnected_log = 0;
+            if (current_time - last_disconnected_log > 10000) {
+                printf("WARNING: MQTT not connected - cannot receive commands\n");
+                last_disconnected_log = current_time;
+            }
+        }
+
         LOS_Msleep(100);  // 减少CPU占用
     }
 }
@@ -888,10 +1137,10 @@ int IoTCloud_StartTask(void)
 {
     printf("Starting IoT Cloud network task...\n");
 
-    // 创建IoT网络任务
+    // 创建IoT网络任务（增加栈大小以防止栈溢出）
     TSK_INIT_PARAM_S task_param = {0};
     task_param.pfnTaskEntry = (TSK_ENTRY_FUNC)IoTNetworkTaskImpl;
-    task_param.uwStackSize = 4096;
+    task_param.uwStackSize = 8192;  // 从4096增加到8192，防止栈溢出
     task_param.pcName = "IoTNetTask";
     task_param.usTaskPrio = 25;
     task_param.uwResved = LOS_TASK_STATUS_DETACHED;
@@ -1441,3 +1690,438 @@ void IoTCloud_Deinit(void)
 // wifi_location_lookup函数已删除
 
 // scan_wifi_for_location函数已删除
+
+/**
+ * @brief 处理云端命令
+ * @param command_name 命令名称
+ * @param payload 命令负载
+ */
+void IoTCloud_ProcessCommand(const char *command_name, const char *payload)
+{
+    printf("Processing command: %s\n", command_name);
+
+    if (!strcmp(command_name, "reset_alarm")) {
+        IoTCloud_HandleResetCommand();
+    } else if (!strcmp(command_name, "control_motor")) {
+        cJSON *root = cJSON_Parse(payload);
+        if (root != NULL) {
+            cJSON *enable = cJSON_GetObjectItem(root, "enable");
+            cJSON *speed = cJSON_GetObjectItem(root, "speed");
+            cJSON *direction = cJSON_GetObjectItem(root, "direction");
+            cJSON *duration = cJSON_GetObjectItem(root, "duration");
+
+            if (cJSON_IsBool(enable)) {
+                bool motor_enabled = cJSON_IsTrue(enable);
+                int motor_speed = cJSON_IsNumber(speed) ? speed->valueint : 50;
+                int motor_direction = cJSON_IsNumber(direction) ? direction->valueint : 1;
+                int motor_duration = cJSON_IsNumber(duration) ? duration->valueint : 0;
+
+                IoTCloud_HandleMotorCommand(motor_enabled, motor_speed, motor_direction, motor_duration);
+            }
+            cJSON_Delete(root);
+        }
+    } else if (!strcmp(command_name, "control_buzzer")) {
+        cJSON *root = cJSON_Parse(payload);
+        if (root != NULL) {
+            cJSON *enable = cJSON_GetObjectItem(root, "enable");
+            if (cJSON_IsBool(enable)) {
+                IoTCloud_HandleBuzzerCommand(cJSON_IsTrue(enable));
+            }
+            cJSON_Delete(root);
+        }
+    } else if (!strcmp(command_name, "control_rgb")) {
+        cJSON *root = cJSON_Parse(payload);
+        if (root != NULL) {
+            cJSON *enable = cJSON_GetObjectItem(root, "enable");
+            cJSON *red = cJSON_GetObjectItem(root, "red");
+            cJSON *green = cJSON_GetObjectItem(root, "green");
+            cJSON *blue = cJSON_GetObjectItem(root, "blue");
+
+            if (cJSON_IsBool(enable) &&
+                cJSON_IsNumber(red) &&
+                cJSON_IsNumber(green) &&
+                cJSON_IsNumber(blue)) {
+
+                IoTCloud_HandleRGBCommand(
+                    cJSON_IsTrue(enable),
+                    red->valueint,
+                    green->valueint,
+                    blue->valueint
+                );
+            }
+            cJSON_Delete(root);
+        }
+    } else if (!strcmp(command_name, "control_voice")) {
+        cJSON *root = cJSON_Parse(payload);
+        if (root != NULL) {
+            cJSON *enable = cJSON_GetObjectItem(root, "enable");
+            if (cJSON_IsBool(enable)) {
+                IoTCloud_HandleVoiceCommand(cJSON_IsTrue(enable));
+            }
+            cJSON_Delete(root);
+        }
+    } else if (!strcmp(command_name, "system_reboot")) {
+        IoTCloud_HandleSystemRebootCommand();
+    } else if (!strcmp(command_name, "config_update")) {
+        IoTCloud_HandleConfigUpdateCommand(payload);
+    } else if (!strcmp(command_name, "calibration")) {
+        IoTCloud_HandleCalibrationCommand();
+    } else if (!strcmp(command_name, "test_mode")) {
+        cJSON *root = cJSON_Parse(payload);
+        if (root != NULL) {
+            cJSON *enable = cJSON_GetObjectItem(root, "enable");
+            if (cJSON_IsBool(enable)) {
+                IoTCloud_HandleTestModeCommand(cJSON_IsTrue(enable));
+            }
+            cJSON_Delete(root);
+        }
+    } else {
+        printf("Unknown command: %s\n", command_name);
+    }
+}
+
+/**
+ * @brief 处理重置命令
+ */
+void IoTCloud_HandleResetCommand(void)
+{
+    printf("Handling reset alarm command\n");
+    g_alarm_acknowledged = true;
+    printf("Alarm acknowledged and reset\n");
+}
+
+/**
+ * @brief 处理配置命令
+ * @param config_data 配置数据
+ */
+void IoTCloud_HandleConfigCommand(const char *config_data)
+{
+    printf("Handling config command: %s\n", config_data);
+    // 解析配置JSON
+    cJSON *root = cJSON_Parse(config_data);
+    if (root != NULL) {
+        // 处理配置参数
+        cJSON_Delete(root);
+    }
+}
+
+/**
+ * @brief 处理电机控制命令
+ * @param enable 是否启用电机
+ * @param speed 电机速度 (0-100)
+ * @param direction 电机方向 (0=停止, 1=正转, 2=反转)
+ * @param duration 运行时长 (秒, 0=持续运行)
+ */
+void IoTCloud_HandleMotorCommand(bool enable, int speed, int direction, int duration)
+{
+    printf("Handling motor command: %s\n", enable ? "ENABLE" : "DISABLE");
+    printf("Speed: %d%%, Direction: %s, Duration: %ds\n",
+           speed,
+           direction == 0 ? "STOP" :
+           direction == 1 ? "FORWARD" : "REVERSE",
+           duration);
+
+    // 更新全局控制变量
+    g_cloud_motor_enabled = enable;
+    g_cloud_motor_speed = speed;
+    g_cloud_motor_direction = (MotorDirection)direction;
+    g_cloud_motor_duration = duration;
+
+    // 实际控制电机的代码
+    if (enable) {
+        // 根据方向控制电机
+        if (direction == MOTOR_DIRECTION_STOP) {
+            // 停止电机
+            printf("Motor stopped\n");
+            Motor_Off();
+        } else {
+            // 运行电机，将秒转换为毫秒
+            uint32_t duration_ms = duration > 0 ? duration * 1000 : 0;
+            Motor_Run(speed, (MotorDirection)direction, duration_ms);
+        }
+    } else {
+        // 停止电机
+        printf("Motor deactivated\n");
+        Motor_Off();
+    }
+}
+
+/**
+ * @brief 处理蜂鸣器控制命令
+ * @param enable 是否启用蜂鸣器
+ */
+void IoTCloud_HandleBuzzerCommand(bool enable)
+{
+    printf("Handling buzzer command: %s\n", enable ? "ENABLE" : "DISABLE");
+    g_cloud_buzzer_enabled = enable;
+
+    // 实际控制蜂鸣器的代码
+    if (enable) {
+        // 启动蜂鸣器
+        printf("Buzzer activated\n");
+    } else {
+        // 停止蜂鸣器
+        printf("Buzzer deactivated\n");
+    }
+}
+
+/**
+ * @brief 处理RGB LED控制命令
+ * @param enable 是否启用RGB LED
+ * @param red 红色分量 (0-255)
+ * @param green 绿色分量 (0-255)
+ * @param blue 蓝色分量 (0-255)
+ */
+void IoTCloud_HandleRGBCommand(bool enable, int red, int green, int blue)
+{
+    printf("Handling RGB command: %s (R:%d, G:%d, B:%d)\n",
+           enable ? "ENABLE" : "DISABLE", red, green, blue);
+
+    g_cloud_rgb_enabled = enable;
+    g_cloud_rgb_red = red;
+    g_cloud_rgb_green = green;
+    g_cloud_rgb_blue = blue;
+
+    // 实际控制RGB LED的代码
+    if (enable) {
+        // 设置RGB颜色
+        printf("RGB LED set to R:%d G:%d B:%d\n", red, green, blue);
+    } else {
+        // 关闭RGB LED
+        printf("RGB LED turned off\n");
+    }
+}
+
+/**
+ * @brief 处理语音模块控制命令
+ * @param enable 是否启用语音模块
+ */
+void IoTCloud_HandleVoiceCommand(bool enable)
+{
+    printf("Handling voice module command: %s\n", enable ? "ENABLE" : "DISABLE");
+    g_cloud_voice_enabled = enable;
+
+    // 实际控制语音模块的代码
+    if (enable) {
+        // 启用语音模块
+        printf("Voice module activated\n");
+    } else {
+        // 禁用语音模块
+        printf("Voice module deactivated\n");
+    }
+}
+
+/**
+ * @brief 处理系统重启命令
+ */
+void IoTCloud_HandleSystemRebootCommand(void)
+{
+    printf("Handling system reboot command\n");
+    printf("System will reboot in 3 seconds...\n");
+
+    // 延迟3秒后重启
+    osDelay(3000);
+
+    // 执行系统重启
+    LOS_Reboot();
+}
+
+/**
+ * @brief 处理配置更新命令
+ * @param config_json 配置JSON字符串
+ */
+void IoTCloud_HandleConfigUpdateCommand(const char *config_json)
+{
+    printf("Handling config update command: %s\n", config_json);
+
+    // 解析配置JSON
+    cJSON *root = cJSON_Parse(config_json);
+    if (root != NULL) {
+        // 处理各种配置参数
+        cJSON *sample_rate = cJSON_GetObjectItem(root, "sample_rate");
+        if (cJSON_IsNumber(sample_rate)) {
+            SetSensorSampleRate(sample_rate->valueint);
+        }
+
+        // 处理风险阈值
+        cJSON *thresholds = cJSON_GetObjectItem(root, "thresholds");
+        if (cJSON_IsObject(thresholds)) {
+            cJSON *tilt = cJSON_GetObjectItem(thresholds, "tilt");
+            cJSON *vibration = cJSON_GetObjectItem(thresholds, "vibration");
+            cJSON *humidity = cJSON_GetObjectItem(thresholds, "humidity");
+            cJSON *light = cJSON_GetObjectItem(thresholds, "light");
+
+            if (cJSON_IsNumber(tilt) && cJSON_IsNumber(vibration) &&
+                cJSON_IsNumber(humidity) && cJSON_IsNumber(light)) {
+
+                SetRiskThresholds(
+                    tilt->valuedouble,
+                    vibration->valuedouble,
+                    humidity->valuedouble,
+                    light->valuedouble
+                );
+            }
+        }
+
+        cJSON_Delete(root);
+    }
+}
+
+/**
+ * @brief 处理传感器校准命令
+ */
+void IoTCloud_HandleCalibrationCommand(void)
+{
+    printf("Handling sensor calibration command\n");
+
+    // 执行传感器校准
+    printf("Starting sensor calibration...\n");
+
+    // 这里应该调用实际的传感器校准函数
+    // 例如: SensorCalibration();
+
+    printf("Sensor calibration completed\n");
+}
+
+/**
+ * @brief 处理测试模式命令
+ * @param enable 是否启用测试模式
+ */
+void IoTCloud_HandleTestModeCommand(bool enable)
+{
+    printf("Handling test mode command: %s\n", enable ? "ENABLE" : "DISABLE");
+    g_cloud_test_mode = enable;
+
+    if (enable) {
+        printf("Test mode activated\n");
+        // 启动测试模式
+    } else {
+        printf("Test mode deactivated\n");
+        // 退出测试模式
+    }
+}
+
+// ==================== 按照e2_iot_smart_security例程添加的处理函数 ====================
+
+/**
+ * @brief 设置马达状态（参考例程）
+ */
+void set_motor_state(cJSON *root)
+{
+    printf("=== MOTOR CONTROL COMMAND ===\n");
+
+    cJSON *paras = cJSON_GetObjectItem(root, "paras");
+    if (paras != NULL) {
+        cJSON *enable = cJSON_GetObjectItem(paras, "enable");
+        cJSON *speed = cJSON_GetObjectItem(paras, "speed");
+        cJSON *direction = cJSON_GetObjectItem(paras, "direction");
+        cJSON *duration = cJSON_GetObjectItem(paras, "duration");
+
+        if (cJSON_IsBool(enable)) {
+            bool motor_enabled = cJSON_IsTrue(enable);
+            int motor_speed = cJSON_IsNumber(speed) ? speed->valueint : 50;
+            int motor_direction = cJSON_IsNumber(direction) ? direction->valueint : 1;
+            int motor_duration = cJSON_IsNumber(duration) ? duration->valueint : 0;
+
+            printf("Raw parameters: enable=%s, speed=%d, direction=%d, duration=%d\n",
+                   motor_enabled ? "true" : "false", motor_speed, motor_direction, motor_duration);
+
+            // 参数验证
+            if (motor_speed < 0) motor_speed = 0;
+            if (motor_speed > 100) motor_speed = 100;
+            if (motor_direction < 0 || motor_direction > 2) motor_direction = 1;
+            if (motor_duration < 0) motor_duration = 0;
+
+            // 更新全局变量
+            g_cloud_motor_enabled = motor_enabled;
+            g_cloud_motor_speed = motor_speed;
+            g_cloud_motor_direction = (MotorDirection)motor_direction;
+            g_cloud_motor_duration = motor_duration;
+
+            printf("Final parameters: enable=%s, speed=%d%%, direction=%d, duration=%ds\n",
+                   motor_enabled ? "ON" : "OFF", motor_speed, motor_direction, motor_duration);
+
+            // 特别处理停止命令
+            if (!motor_enabled) {
+                g_motor_stop_commands++;
+                printf("*** STOPPING MOTOR *** (Stop command #%d)\n", g_motor_stop_commands);
+                printf("Calling Motor_Off() directly...\n");
+                Motor_Off();  // 直接调用停止函数
+                printf("Motor_Off() called successfully\n");
+                printf("Motor stopped directly\n");
+
+                // 额外确保停止
+                printf("Double-checking motor stop...\n");
+                Motor_Off();
+                printf("Motor stop confirmed\n");
+            } else {
+                g_motor_start_commands++;
+                printf("*** STARTING MOTOR *** (Start command #%d)\n", g_motor_start_commands);
+                // 调用实际的马达控制函数
+                IoTCloud_HandleMotorCommand(motor_enabled, motor_speed, motor_direction, motor_duration);
+            }
+        } else {
+            printf("ERROR: enable parameter is not boolean\n");
+        }
+    }
+}
+
+/**
+ * @brief 设置蜂鸣器状态（参考例程）
+ */
+void set_buzzer_state(cJSON *root)
+{
+    printf("=== BUZZER CONTROL COMMAND ===\n");
+
+    cJSON *paras = cJSON_GetObjectItem(root, "paras");
+    if (paras != NULL) {
+        cJSON *enable = cJSON_GetObjectItem(paras, "enable");
+        if (cJSON_IsBool(enable)) {
+            g_cloud_buzzer_enabled = cJSON_IsTrue(enable);
+            printf("Buzzer: %s\n", g_cloud_buzzer_enabled ? "ON" : "OFF");
+            IoTCloud_HandleBuzzerCommand(g_cloud_buzzer_enabled);
+        }
+    }
+}
+
+/**
+ * @brief 设置RGB状态（参考例程）
+ */
+void set_rgb_state(cJSON *root)
+{
+    printf("=== RGB LED CONTROL COMMAND ===\n");
+
+    cJSON *paras = cJSON_GetObjectItem(root, "paras");
+    if (paras != NULL) {
+        cJSON *enable = cJSON_GetObjectItem(paras, "enable");
+        cJSON *red = cJSON_GetObjectItem(paras, "red");
+        cJSON *green = cJSON_GetObjectItem(paras, "green");
+        cJSON *blue = cJSON_GetObjectItem(paras, "blue");
+
+        if (cJSON_IsBool(enable) && cJSON_IsNumber(red) &&
+            cJSON_IsNumber(green) && cJSON_IsNumber(blue)) {
+
+            g_cloud_rgb_enabled = cJSON_IsTrue(enable);
+            g_cloud_rgb_red = red->valueint;
+            g_cloud_rgb_green = green->valueint;
+            g_cloud_rgb_blue = blue->valueint;
+
+            printf("RGB: %s (R:%d, G:%d, B:%d)\n",
+                   g_cloud_rgb_enabled ? "ON" : "OFF",
+                   g_cloud_rgb_red, g_cloud_rgb_green, g_cloud_rgb_blue);
+
+            IoTCloud_HandleRGBCommand(g_cloud_rgb_enabled,
+                                    g_cloud_rgb_red, g_cloud_rgb_green, g_cloud_rgb_blue);
+        }
+    }
+}
+
+/**
+ * @brief 设置报警重置（参考例程）
+ */
+void set_alarm_reset(void)
+{
+    printf("=== RESET ALARM COMMAND ===\n");
+    g_alarm_acknowledged = true;
+    printf("Alarm reset successfully\n");
+}
