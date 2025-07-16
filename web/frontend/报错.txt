@@ -1,0 +1,94 @@
+(base) PS C:\Users\Administrator\landslide-monitor> npm run build                                                                                                                                                 
+                                                                                                                                                                          
+> landslide-monitor@0.1.0 build
+> next build
+
+   ▲ Next.js 15.2.2
+   - Environments: .env.local
+   - Experiments (use with caution):
+     ✓ optimizeCss
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+
+Failed to compile.
+
+./app/analysis/page.tsx
+22:3  Error: 'LazyExceptionStatsChart' is defined but never used.  @typescript-eslint/no-unused-vars
+30:10  Error: 'visibleComponents' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+30:29  Error: 'setVisibleComponents' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+37:11  Error: 'data' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+37:46  Error: 'latestData' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+40:11  Error: 'metrics' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./app/components/AccelerationChart.tsx
+17:27  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+26:9  Error: 'totalPoints' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./app/components/BarChart.tsx
+26:13  Error: 'visibleData' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./app/components/ClusterPopup.tsx
+8:11  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./app/components/DeviceErrorChart.tsx
+57:32  Error: 'i' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/components/ExceptionStatsChart.tsx
+31:6  Warning: React Hook useEffect has a missing dependency: 'fullData.length'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+35:6  Warning: React Hook useEffect has a missing dependency: 'fullData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/components/GyroscopeChart.tsx
+17:27  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+26:9  Error: 'totalPoints' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./app/components/HumidityChart.tsx
+17:27  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+27:9  Error: 'totalPoints' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+29:47  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+42:29  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./app/components/LiquidFillChart.tsx
+58:33  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./app/components/MapContainer.tsx
+24:49  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+85:54  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./app/components/RealtimeAnomalyTable.tsx
+10:50  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./app/components/TemperatureChart.tsx
+17:27  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+27:9  Error: 'totalPoints' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+29:47  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+42:29  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+86:52  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+86:81  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+86:92  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./app/components2/MonitoringPoints.tsx
+2:20  Error: 'useEffect' is defined but never used.  @typescript-eslint/no-unused-vars
+9:8  Error: 'AlertDetail' is defined but never used.  @typescript-eslint/no-unused-vars
+512:10  Error: 'devices' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+572:10  Error: 'selectedDevice' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+574:10  Error: 'showDevices' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+574:23  Error: 'setShowDevices' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./app/hooks/useDeviceErrorData.ts
+27:72  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./app/hooks/usePerformanceMonitor.ts
+37:40  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./app/hooks/useRealtimeAnomalies.ts
+41:6  Warning: React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/hooks/useSensorData.ts
+20:18  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./lib/useIotDataStore.ts
+17:18  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+(base) PS C:\Users\Administrator\landslide-monitor>
