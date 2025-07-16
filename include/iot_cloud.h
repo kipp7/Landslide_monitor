@@ -133,7 +133,7 @@ void IoTCloud_HandleConfigCommand(const char *config_data);
 
 // 新增设备控制命令处理函数
 void IoTCloud_HandleMotorCommand(bool enable, int speed, int direction, int duration);
-void IoTCloud_HandleBuzzerCommand(bool enable);
+void IoTCloud_HandleBuzzerCommand(bool enable, int frequency, int duration, int pattern);
 void IoTCloud_HandleRGBCommand(bool enable, int red, int green, int blue);
 void IoTCloud_HandleVoiceCommand(bool enable);
 void IoTCloud_HandleSystemRebootCommand(void);

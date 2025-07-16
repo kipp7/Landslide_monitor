@@ -1724,8 +1724,17 @@ void IoTCloud_ProcessCommand(const char *command_name, const char *payload)
         cJSON *root = cJSON_Parse(payload);
         if (root != NULL) {
             cJSON *enable = cJSON_GetObjectItem(root, "enable");
+            cJSON *frequency = cJSON_GetObjectItem(root, "frequency");
+            cJSON *duration = cJSON_GetObjectItem(root, "duration");
+            cJSON *pattern = cJSON_GetObjectItem(root, "pattern");
+
             if (cJSON_IsBool(enable)) {
-                IoTCloud_HandleBuzzerCommand(cJSON_IsTrue(enable));
+                bool buzzer_enabled = cJSON_IsTrue(enable);
+                int buzzer_frequency = cJSON_IsNumber(frequency) ? frequency->valueint : 2000;
+                int buzzer_duration = cJSON_IsNumber(duration) ? duration->valueint : 0;
+                int buzzer_pattern = cJSON_IsNumber(pattern) ? pattern->valueint : 0;
+
+                IoTCloud_HandleBuzzerCommand(buzzer_enabled, buzzer_frequency, buzzer_duration, buzzer_pattern);
             }
             cJSON_Delete(root);
         }
@@ -1849,19 +1858,68 @@ void IoTCloud_HandleMotorCommand(bool enable, int speed, int direction, int dura
 /**
  * @brief 处理蜂鸣器控制命令
  * @param enable 是否启用蜂鸣器
+ * @param frequency 蜂鸣器频率 (Hz, 默认2000Hz)
+ * @param duration 持续时间 (秒, 0=持续运行)
+ * @param pattern 蜂鸣模式 (0=连续, 1=短响, 2=长响, 3=间歇)
  */
-void IoTCloud_HandleBuzzerCommand(bool enable)
+void IoTCloud_HandleBuzzerCommand(bool enable, int frequency, int duration, int pattern)
 {
     printf("Handling buzzer command: %s\n", enable ? "ENABLE" : "DISABLE");
+    printf("Frequency: %dHz, Duration: %ds, Pattern: %s\n",
+           frequency,
+           duration,
+           pattern == 0 ? "CONTINUOUS" :
+           pattern == 1 ? "SHORT_BEEP" :
+           pattern == 2 ? "LONG_BEEP" : "INTERMITTENT");
+
+    // 更新全局控制变量
     g_cloud_buzzer_enabled = enable;
 
     // 实际控制蜂鸣器的代码
     if (enable) {
-        // 启动蜂鸣器
         printf("Buzzer activated\n");
+
+        // 根据模式控制蜂鸣器
+        switch (pattern) {
+            case 0: // 连续响
+                if (duration > 0) {
+                    // 指定时间的连续响
+                    printf("Buzzer continuous beep for %d seconds\n", duration);
+                    Buzzer_BeepWithFreq(duration * 1000, frequency > 0 ? frequency : 2000);
+                } else {
+                    // 持续响 - 启动PWM但不自动停止
+                    printf("Buzzer continuous beep (indefinite)\n");
+                    Buzzer_Start(frequency > 0 ? frequency : 2000);
+                }
+                break;
+
+            case 1: // 短响模式 (200ms)
+                printf("Buzzer short beep pattern\n");
+                Buzzer_BeepWithFreq(200, frequency > 0 ? frequency : 2000);
+                break;
+
+            case 2: // 长响模式 (1000ms)
+                printf("Buzzer long beep pattern\n");
+                Buzzer_BeepWithFreq(1000, frequency > 0 ? frequency : 2000);
+                break;
+
+            case 3: // 间歇模式 (3次短响)
+                printf("Buzzer intermittent pattern\n");
+                for (int i = 0; i < 3; i++) {
+                    Buzzer_BeepWithFreq(200, frequency > 0 ? frequency : 2000);
+                    LOS_Msleep(300);  // 间隔300ms
+                }
+                break;
+
+            default:
+                printf("Unknown buzzer pattern, using default short beep\n");
+                Buzzer_BeepWithFreq(500, frequency > 0 ? frequency : 2000);
+                break;
+        }
     } else {
         // 停止蜂鸣器
         printf("Buzzer deactivated\n");
+        Buzzer_Off();
     }
 }
 
@@ -2066,6 +2124,10 @@ void set_motor_state(cJSON *root)
     }
 }
 
+// 添加蜂鸣器命令计数器
+static volatile int g_buzzer_start_commands = 0;
+static volatile int g_buzzer_stop_commands = 0;
+
 /**
  * @brief 设置蜂鸣器状态（参考例程）
  */
@@ -2076,10 +2138,40 @@ void set_buzzer_state(cJSON *root)
     cJSON *paras = cJSON_GetObjectItem(root, "paras");
     if (paras != NULL) {
         cJSON *enable = cJSON_GetObjectItem(paras, "enable");
+        cJSON *frequency = cJSON_GetObjectItem(paras, "frequency");
+        cJSON *duration = cJSON_GetObjectItem(paras, "duration");
+        cJSON *pattern = cJSON_GetObjectItem(paras, "pattern");
+
         if (cJSON_IsBool(enable)) {
-            g_cloud_buzzer_enabled = cJSON_IsTrue(enable);
-            printf("Buzzer: %s\n", g_cloud_buzzer_enabled ? "ON" : "OFF");
-            IoTCloud_HandleBuzzerCommand(g_cloud_buzzer_enabled);
+            bool buzzer_enabled = cJSON_IsTrue(enable);
+            int buzzer_frequency = cJSON_IsNumber(frequency) ? frequency->valueint : 2000;
+            int buzzer_duration = cJSON_IsNumber(duration) ? duration->valueint : 0;
+            int buzzer_pattern = cJSON_IsNumber(pattern) ? pattern->valueint : 0;
+
+            printf("Buzzer parameters: enable=%s, frequency=%dHz, duration=%ds, pattern=%d\n",
+                   buzzer_enabled ? "true" : "false", buzzer_frequency, buzzer_duration, buzzer_pattern);
+
+            // 特别处理停止命令
+            if (!buzzer_enabled) {
+                g_buzzer_stop_commands++;
+                printf("*** STOPPING BUZZER *** (Stop command #%d)\n", g_buzzer_stop_commands);
+                printf("Calling Buzzer_Off() directly...\n");
+                Buzzer_Off();  // 直接调用停止函数
+                printf("Buzzer_Off() called successfully\n");
+                printf("Buzzer stopped directly\n");
+
+                // 额外确保停止
+                printf("Double-checking buzzer stop...\n");
+                Buzzer_Off();
+                printf("Buzzer stop confirmed\n");
+            } else {
+                g_buzzer_start_commands++;
+                printf("*** STARTING BUZZER *** (Start command #%d)\n", g_buzzer_start_commands);
+                // 调用实际的蜂鸣器控制函数
+                IoTCloud_HandleBuzzerCommand(buzzer_enabled, buzzer_frequency, buzzer_duration, buzzer_pattern);
+            }
+        } else {
+            printf("ERROR: enable parameter is not boolean\n");
         }
     }
 }

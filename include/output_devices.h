@@ -138,6 +138,8 @@ int Buzzer_Init(void);
 void Buzzer_SetMode(BuzzerMode mode);
 void Buzzer_SetFrequency(uint32_t freq_hz);
 void Buzzer_Beep(uint32_t duration_ms);
+void Buzzer_BeepWithFreq(uint32_t duration_ms, uint32_t frequency_hz);
+void Buzzer_Start(uint32_t frequency_hz);
 void Buzzer_BeepByRisk(RiskLevel risk_level);
 void Buzzer_Off(void);
 

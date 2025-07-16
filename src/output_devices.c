@@ -408,11 +408,57 @@ void Buzzer_BeepByRisk(RiskLevel risk_level)
 }
 
 /**
+ * @brief 蜂鸣器响铃（自定义频率）
+ * @param duration_ms 持续时间 (毫秒)
+ * @param frequency_hz 频率 (Hz)
+ */
+void Buzzer_BeepWithFreq(uint32_t duration_ms, uint32_t frequency_hz)
+{
+    if (!g_buzzer_initialized || g_alarm_muted) {
+        return;
+    }
+
+    // 限制频率范围 (100Hz - 10kHz)
+    if (frequency_hz < 100) frequency_hz = 100;
+    if (frequency_hz > 10000) frequency_hz = 10000;
+
+    printf("Buzzer beep: %dms at %dHz\n", duration_ms, frequency_hz);
+
+    // 开启蜂鸣器 (50%占空比, 自定义频率)
+    IoTPwmStart(BUZZER_PWM, 50, frequency_hz);
+
+    // 延时后关闭
+    LOS_Msleep(duration_ms);
+    IoTPwmStop(BUZZER_PWM);
+}
+
+/**
+ * @brief 启动蜂鸣器（持续响）
+ * @param frequency_hz 频率 (Hz)
+ */
+void Buzzer_Start(uint32_t frequency_hz)
+{
+    if (!g_buzzer_initialized || g_alarm_muted) {
+        return;
+    }
+
+    // 限制频率范围 (100Hz - 10kHz)
+    if (frequency_hz < 100) frequency_hz = 100;
+    if (frequency_hz > 10000) frequency_hz = 10000;
+
+    printf("Buzzer start continuous at %dHz\n", frequency_hz);
+
+    // 开启蜂鸣器 (50%占空比, 自定义频率)
+    IoTPwmStart(BUZZER_PWM, 50, frequency_hz);
+}
+
+/**
  * @brief 关闭蜂鸣器
  */
 void Buzzer_Off(void)
 {
     if (g_buzzer_initialized) {
+        printf("Buzzer stopped\n");
         IoTPwmStop(BUZZER_PWM);  // 完全停止PWM输出
     }
 }
