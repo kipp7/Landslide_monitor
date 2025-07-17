@@ -1,0 +1,25 @@
+{
+  "name": "landslide-iot-service",
+  "version": "1.0.0",
+  "description": "滑坡监测IoT数据接收服务",
+  "main": "iot-server.js",
+  "scripts": {
+    "start": "node iot-server.js",
+    "dev": "node iot-server.js",
+    "test": "node test-server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "@supabase/supabase-js": "^2.49.1"
+  },
+  "keywords": [
+    "iot",
+    "huawei",
+    "landslide",
+    "monitoring",
+    "supabase"
+  ],
+  "author": "Landslide Monitor Team",
+  "license": "MIT"
+}
