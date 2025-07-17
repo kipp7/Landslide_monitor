@@ -4,8 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
+    "dev:port": "next dev --turbopack -p 8077",
     "build": "next build",
     "start": "next start",
+    "start:port": "next start -p 8077",
     "lint": "next lint",
     "analyze": "cross-env ANALYZE=true next build",
     "build:prod": "next build && next export"

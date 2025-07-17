@@ -1,0 +1,62 @@
+🏔️  滑坡监测IoT服务已启动
+📡 端口: 5100
+🌐 健康检查: http://localhost:5100/health
+📊 服务信息: http://localhost:5100/info
+📨 IoT数据接收: http://localhost:5100/iot/huawei
+⏰ 启动时间: 2025-07-17T09:03:42.258Z
+=====================================
+=== 收到华为IoT数据 ===
+时间: 2025-07-17T09:04:10.307Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20240117T120000Z",
+  "notify_data": {
+    "header": {
+      "device_id": "test-device-002",
+      "product_id": "landslide-monitor"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "sensor_data",
+          "properties": {
+            "temperature": 26.8,
+            "humidity": 58.3
+          }
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: test-device-002
+📦 产品ID: landslide-monitor
+🔧 服务数量: 1
+
+🔄 处理服务: sensor_data
+属性数据: { temperature: 26.8, humidity: 58.3 }
+📝 准备插入数据: {
+  device_id: 'test-device-002',
+  product_id: 'landslide-monitor',
+  service_id: 'sensor_data',
+  event_time: '2024-01-17T12:00:00.000Z',
+  resource: 'device.property',
+  event_type: 'report',
+  temperature: 26.8,
+  humidity: 58.3,
+  raw_data: {
+    resource: 'device.property',
+    event: 'report',
+    event_time: '20240117T120000Z',
+    notify_data: { header: [Object], body: [Object] }
+  },
+  created_at: '2025-07-17T09:04:10.308Z',
+  updated_at: '2025-07-17T09:04:10.308Z'
+}
+✅ 数据插入成功
+插入的记录ID: 5
+
+⏱️  处理完成，耗时: 8101ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
