@@ -30,6 +30,7 @@
 #include "iot_cloud.h"  // 华为云IoT功能
 #include "data_storage.h"  // Flash数据存储功能
 #include "reset.h"  // 系统重启功能
+#include "gps_module.h"  // GPS模块功能
 
 // 全局变量
 static SystemState g_system_state = SYSTEM_STATE_INIT;
@@ -225,6 +226,7 @@ void LandslideMonitorShutdown(void)
     // 反初始化硬件
     Sensors_Deinit();
     OutputDevices_Deinit();
+    GPS_Deinit();
     
     // 删除同步对象
     if (g_data_mutex != 0) {
@@ -480,6 +482,15 @@ static int InitializeHardware(void)
         printf("IoT Cloud initialized successfully\n");
     }
 
+    // 初始化GPS模块
+    ret = GPS_Init();
+    if (ret != 0) {
+        printf("GPS module initialization failed: %d (continuing without GPS)\n", ret);
+        // GPS失败不影响系统运行
+    } else {
+        printf("GPS module initialized successfully\n");
+    }
+
     printf("Hardware initialization completed\n");
     return 0;
 }
@@ -575,6 +586,7 @@ static void SensorCollectionTask(void)
     MPU6050_Data mpu_data;
     SHT30_Data sht_data;
     BH1750_Data bh_data;
+    GPSData gps_data;
     int ret;
     uint32_t sample_interval_ms = 1000 / SENSOR_SAMPLE_RATE_HZ;
 
@@ -600,6 +612,16 @@ static void SensorCollectionTask(void)
             sensor_data.humidity = sht_data.humidity;
 
             sensor_data.light_intensity = bh_data.light_intensity;
+
+            // 读取GPS数据
+            if (GPS_GetData(&gps_data) == 0) {
+                sensor_data.gps_latitude = gps_data.latitude;
+                sensor_data.gps_longitude = gps_data.longitude;
+                sensor_data.gps_altitude = gps_data.altitude;
+                sensor_data.gps_valid = gps_data.valid;
+            } else {
+                sensor_data.gps_valid = false;
+            }
 
             sensor_data.timestamp = LOS_TickCountGet();
             sensor_data.data_valid = true;

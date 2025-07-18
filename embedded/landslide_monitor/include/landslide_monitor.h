@@ -24,7 +24,9 @@ extern "C" {
 #endif
 
 // 系统配置参数（优化响应速度）
+#ifndef SENSOR_SAMPLE_RATE_HZ
 #define SENSOR_SAMPLE_RATE_HZ       15      // 传感器采样频率 15Hz
+#endif
 #define DATA_BUFFER_SIZE           100      // 数据缓冲区大小
 #define RISK_EVAL_INTERVAL_MS      200      // 风险评估间隔 200ms
 #define LCD_UPDATE_INTERVAL_MS     2000     // LCD更新间隔 2秒
@@ -60,7 +62,13 @@ typedef struct {
     
     // BH1750数据
     float light_intensity;      // 光照强度 (lux)
-    
+
+    // GPS定位数据
+    double gps_latitude;        // GPS纬度
+    double gps_longitude;       // GPS经度
+    float gps_altitude;         // GPS海拔高度 (米)
+    bool gps_valid;             // GPS数据有效性
+
     uint32_t timestamp;         // 时间戳 (ms)
     bool data_valid;            // 数据有效标志
 } SensorData;
@@ -76,6 +84,17 @@ typedef struct {
     float vibration_intensity;  // 振动强度
     uint32_t timestamp;         // 时间戳
 } ProcessedData;
+
+// GPS定位数据
+typedef struct {
+    double latitude;                // 纬度
+    double longitude;               // 经度
+    float altitude;                 // 海拔高度 (米)
+    float accuracy;                 // 定位精度 (米)
+    bool valid;                     // 定位数据是否有效
+    char raw_data[128];             // 原始NMEA数据
+    uint32_t last_update_time;      // 最后更新时间
+} GPSData;
 
 // 风险等级枚举
 typedef enum {

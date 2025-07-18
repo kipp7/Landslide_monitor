@@ -65,6 +65,12 @@ typedef struct {
     bool alarm_active;     // 报警状态
     uint32_t uptime;       // 系统运行时间 (秒)
 
+    // GPS定位数据
+    double gps_latitude;   // GPS纬度
+    double gps_longitude;  // GPS经度
+    float gps_altitude;    // GPS海拔高度 (米)
+    bool gps_valid;        // GPS数据有效性
+
     // 扩展字段
     bool rgb_enabled;      // RGB LED使能
     bool buzzer_enabled;   // 蜂鸣器使能

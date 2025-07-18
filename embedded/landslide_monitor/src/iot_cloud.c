@@ -319,7 +319,9 @@ void ConnectionStatus_Update(void)
         return;
     }
 
-    bool wifi_status = (wifi_get_connect_status_internal() == 1);
+    // 使用简化的WiFi状态检查，避免过度验证
+    int basic_wifi_status = wifi_get_connect_status_internal();
+    bool wifi_status = (basic_wifi_status == 1);
     bool mqtt_status = mqtt_is_connected();
     uint32_t current_time = LOS_TickCountGet();
 
@@ -348,6 +350,11 @@ void ConnectionStatus_Update(void)
         } else {
             printf(" WiFi连接断开，尝试重连...\n");
             g_connection_status.disconnect_count++;
+            // WiFi断开时立即标记MQTT为断开
+            if (mqttConnectFlag) {
+                printf(" WiFi断开，同时标记MQTT为断开\n");
+                mqttConnectFlag = 0;
+            }
         }
         g_connection_status.wifi_connected = wifi_status;
     }
@@ -467,22 +474,46 @@ static bool g_system_reboot_requested = false;
 // WiFi状态检查函数
 static int check_wifi_connected(void)
 {
-    // 使用实际的WiFi状态检查
-    int status = wifi_get_connect_status_internal();
+    // 首先使用基础的WiFi状态检查
+    int basic_status = wifi_get_connect_status_internal();
 
-    // 验证连接状态：尝试获取连接信息
+    // 如果基础检查显示断开，直接返回断开
+    if (basic_status != 1) {
+        return 0;
+    }
+
+    // 基础检查显示连接，进行进一步验证
     WifiLinkedInfo info;
     memset(&info, 0, sizeof(WifiLinkedInfo));
 
+    // 尝试获取连接信息进行验证
     if (GetLinkedInfo(&info) == WIFI_SUCCESS) {
         // 如果能获取到连接信息且状态为已连接，则认为WiFi正常
         if (info.connState == WIFI_CONNECTED && strlen(info.ssid) > 0) {
-            return 1;  // WiFi已连接
+            return 1;  // WiFi已连接且验证通过
         }
     }
 
-    // 如果无法获取连接信息或状态不正确，则认为WiFi断开
-    return 0;
+    // 如果GetLinkedInfo失败，但基础状态显示连接，可能是刚连接还没稳定
+    // 给一个宽松的判断：如果基础状态是连接的，就认为是连接的
+    // 这避免了刚连接时的误判
+    static uint32_t last_basic_connected_time = 0;
+    uint32_t current_time = LOS_TickCountGet();
+
+    if (basic_status == 1) {
+        if (last_basic_connected_time == 0) {
+            last_basic_connected_time = current_time;
+        }
+
+        // 如果基础状态连续显示连接超过3秒，就认为是真正连接
+        if (current_time - last_basic_connected_time > 3000) {
+            return 1;  // 基础状态稳定连接
+        }
+    } else {
+        last_basic_connected_time = 0;
+    }
+
+    return 0;  // 其他情况认为断开
 }
 
 // 全局变量用于测试回调是否被调用
@@ -724,75 +755,18 @@ begin:
     printf("This should match the Device ID in Huawei Cloud Platform\n");
     printf("*********************************\n");
 
-    // 发送一个测试消息确认订阅工作正常
-    printf("Testing MQTT subscription by sending a test property report...\n");
-    static char test_payload[256];  // 使用静态变量减少栈使用
-    sprintf(test_payload, "{\"services\":[{\"service_id\":\"test\",\"properties\":{\"subscription_test\":\"ready\",\"timestamp\":%u}}]}",
-            (unsigned int)(LOS_TickCountGet() / 1000));
-
-    static MQTTMessage test_message;  // 使用静态变量减少栈使用
-    test_message.qos = 0;
-    test_message.retained = 0;
-    test_message.payload = test_payload;
-    test_message.payloadlen = strlen(test_payload);
-
-    int test_rc = MQTTPublish(&client, PUBLISH_TOPIC, &test_message);
-    if (test_rc == 0) {
-        printf("Test message sent successfully - MQTT is working\n");
-    } else {
-        printf("Test message failed - MQTT may have issues: %d\n", test_rc);
-    }
-
-    // 测试：尝试向自己发送一个模拟命令（使用华为云标准格式）
-    printf("Testing command subscription by sending a self-test command...\n");
-    static char test_command_topic[256];  // 使用静态变量减少栈使用
-    sprintf(test_command_topic, "$oc/devices/%s/sys/commands/request_id=test123", DEVICE_ID);
-
-    // 使用华为云API文档中的标准格式
-    char test_command_payload[] = "{\"service_id\":\"test\",\"command_name\":\"control_motor\",\"paras\":{\"enable\":true,\"speed\":50}}";
-
-    MQTTMessage test_cmd_message;
-    test_cmd_message.qos = 0;
-    test_cmd_message.retained = 0;
-    test_cmd_message.payload = test_command_payload;
-    test_cmd_message.payloadlen = strlen(test_command_payload);
-
-    int test_cmd_rc = MQTTPublish(&client, test_command_topic, &test_cmd_message);
-    if (test_cmd_rc == 0) {
-        printf("Self-test command sent (Motor Control) - should trigger callback if subscription works\n");
-        printf("Waiting 3 seconds for callback...\n");
-
-        // 立即尝试处理消息
-        for (int i = 0; i < 6; i++) {
-            int immediate_yield = MQTTYield(&client, 500);
-            printf("Immediate yield %d: %d\n", i+1, immediate_yield);
-            LOS_Msleep(500);
-        }
-
-        printf("Self-test callback check completed\n");
-
-        // 检查回调是否被触发
-        printf("Callback test result: %s (count: %d)\n",
-               g_callback_test_counter > 0 ? "SUCCESS - Callback works!" : "FAILED - Callback not triggered",
-               g_callback_test_counter);
-
-        if (g_callback_test_counter == 0) {
-            printf("WARNING: Self-test command did not trigger callback!\n");
-            printf("This indicates a problem with MQTT subscription or callback registration.\n");
-        }
-    } else {
-        printf("Self-test command failed: %d\n", test_cmd_rc);
-    }
+    // MQTT订阅设置完成，设备已准备接收命令
+    printf("MQTT subscription setup completed - ready to receive commands from Huawei Cloud\n");
+    printf("Note: Device can only receive commands from Huawei Cloud IoT Platform\n");
+    printf("Commands must be sent from Huawei Cloud IoT Platform console or API\n");
     printf("*** IMPORTANT: Device is ONLINE and listening for commands ***\n");
     printf("IoT Cloud connection fully established!\n");
     mqttConnectFlag = 1;
     printf("MQTT connected and subscribed.\n");
 
-    // 立即测试回调函数是否工作
-    printf("Testing callback function registration...\n");
-    printf("Callback function address: %p\n", (void*)mqtt_message_arrived);
-    printf("Callback test counter: %d\n", g_callback_test_counter);
-    printf("If commands are sent but no callback is triggered, there may be a subscription issue.\n");
+    // 显示回调函数信息
+    printf("Callback function registered: mqtt_message_arrived\n");
+    printf("Device ready to receive commands from Huawei Cloud IoT Platform\n");
     printf("=== Huawei Cloud IoT Platform Connected ===\n");
     printf("Service: Landslide Monitor\n");
     printf("Device ID: %s\n", DEVICE_ID);
@@ -842,6 +816,24 @@ int wait_message(void)
  */
 unsigned int mqtt_is_connected(void)
 {
+    // 如果WiFi断开，MQTT也应该被视为断开
+    bool wifi_connected = (check_wifi_connected() == 1);
+
+    // 添加调试信息
+    static uint32_t last_debug_time = 0;
+    uint32_t current_time = LOS_TickCountGet();
+    if (current_time - last_debug_time > 10000) {  // 每10秒打印一次调试信息
+        int basic_status = wifi_get_connect_status_internal();
+        printf("DEBUG: WiFi status - basic=%d, check_result=%d, mqttFlag=%d\n",
+               basic_status, wifi_connected ? 1 : 0, mqttConnectFlag);
+        last_debug_time = current_time;
+    }
+
+    if (!wifi_connected && mqttConnectFlag) {
+        printf("WiFi disconnected, marking MQTT as disconnected\n");
+        mqttConnectFlag = 0;
+    }
+
     return mqttConnectFlag;
 }
 
@@ -1574,9 +1566,15 @@ static void convert_landslide_to_iot_data(const LandslideIotData *landslide_data
     // MPU6050温度（decimal类型）
     iot_data->mpu_temperature = (double)landslide_data->temperature;    // 使用环境温度作为MPU温度
 
-    // GPS定位数据（decimal类型）- 使用固定位置坐标（广西南宁）
-    iot_data->latitude = 22.8170;      // 广西南宁纬度
-    iot_data->longitude = 108.3669;    // 广西南宁经度
+    // GPS定位数据（decimal类型）- 使用真实GPS数据或默认坐标
+    if (landslide_data->gps_valid) {
+        iot_data->latitude = landslide_data->gps_latitude;      // 真实GPS纬度
+        iot_data->longitude = landslide_data->gps_longitude;    // 真实GPS经度
+    } else {
+        // GPS无效时使用默认位置坐标（广西南宁）
+        iot_data->latitude = 22.8170;      // 广西南宁纬度
+        iot_data->longitude = 108.3669;    // 广西南宁经度
+    }
 
     // 振动传感器数据（decimal类型）
     // 振动强度基于陀螺仪数据计算，已经过滤波和校准处理
@@ -1603,6 +1601,14 @@ static void convert_landslide_to_iot_data(const LandslideIotData *landslide_data
  */
 void send_msg_to_mqtt(e_iot_data *iot_data)
 {
+    // 检查WiFi和MQTT连接状态
+    bool wifi_connected = (check_wifi_connected() == 1);
+    if (!wifi_connected) {
+        printf("WiFi disconnected, cannot send MQTT data.\n");
+        mqttConnectFlag = 0;  // WiFi断开时立即标记MQTT为断开
+        return;
+    }
+
     if (!mqttConnectFlag) {
         printf("MQTT not connected.\n");
         return;
