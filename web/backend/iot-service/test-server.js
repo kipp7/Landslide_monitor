@@ -43,7 +43,7 @@ const testData = {
 };
 
 async function testServer() {
-  console.log('🧪 测试华为IoT数据接收服务...\n');
+  console.log(' 测试华为IoT数据接收服务...\n');
 
   try {
     // 测试健康检查
@@ -51,9 +51,9 @@ async function testServer() {
     const healthResponse = await fetch('http://localhost:5100/health');
     if (healthResponse.ok) {
       const healthData = await healthResponse.json();
-      console.log('✅ 健康检查通过:', healthData.status);
+      console.log(' 健康检查通过:', healthData.status);
     } else {
-      console.log('❌ 健康检查失败');
+      console.log(' 健康检查失败');
       return;
     }
 
@@ -62,7 +62,7 @@ async function testServer() {
     const infoResponse = await fetch('http://localhost:5100/info');
     if (infoResponse.ok) {
       const infoData = await infoResponse.json();
-      console.log('✅ 服务信息:', infoData.name);
+      console.log(' 服务信息:', infoData.name);
     }
 
     // 测试IoT数据接收
@@ -79,7 +79,7 @@ async function testServer() {
 
     if (iotResponse.ok) {
       const iotData = await iotResponse.json();
-      console.log('✅ IoT数据接收成功:');
+      console.log(' IoT数据接收成功:');
       console.log('  状态码:', iotData['Status Code']);
       console.log('  消息:', iotData.message);
       console.log('  设备ID:', iotData.device_id);
@@ -87,20 +87,20 @@ async function testServer() {
       console.log('  处理时间:', iotData.processing_time_ms + 'ms');
     } else {
       const errorData = await iotResponse.json();
-      console.log('❌ IoT数据接收失败:', errorData);
+      console.log(' IoT数据接收失败:', errorData);
     }
 
-    console.log('\n🎉 测试完成!');
+    console.log('\n 测试完成!');
 
   } catch (error) {
-    console.error('❌ 测试过程中出错:', error.message);
-    console.log('\n💡 请确保服务已启动: ./start.sh');
+    console.error(' 测试过程中出错:', error.message);
+    console.log('\n 请确保服务已启动: ./start.sh');
   }
 }
 
 // 检查是否有fetch函数（Node.js 18+）
 if (typeof fetch === 'undefined') {
-  console.log('❌ 需要Node.js 18+版本或安装node-fetch');
+  console.log(' 需要Node.js 18+版本或安装node-fetch');
   console.log('当前Node.js版本:', process.version);
   process.exit(1);
 }

@@ -3,11 +3,13 @@
 import React, { useRef, useEffect } from 'react'
 import * as echarts from 'echarts'
 import useDeviceErrorData from '../hooks/useDeviceErrorData'
+import useDeviceNames from '../hooks/useDeviceNames'
 
 const DeviceErrorChart = () => {
   const chartRef = useRef<HTMLDivElement | null>(null)
   const chartInstance = useRef<echarts.EChartsType | null>(null)
   const { data, loading } = useDeviceErrorData()
+  const { getFriendlyName } = useDeviceNames()
 
   useEffect(() => {
     if (!chartRef.current || loading || data.length === 0) return
@@ -19,7 +21,7 @@ const DeviceErrorChart = () => {
 
     // ✅ 设备排序：按异常数量降序
     const sortedData = [...data].sort((a, b) => b.count - a.count)
-    const devices = sortedData.map(item => item.device_id.replace('device_', ''))
+    const devices = sortedData.map(item => getFriendlyName(item.device_id))
     const values = sortedData.map(item => item.count)
 
     const maxValue = Math.max(...values)
@@ -54,7 +56,7 @@ const DeviceErrorChart = () => {
         {
           type: 'bar',
           barWidth: '40%',
-          data: values.map((v, i) => ({
+          data: values.map((v) => ({
             value: v,
             itemStyle: {
               color: v === maxValue ? hoverColor : baseColor, // ✅ 所有最大值都标红
@@ -106,7 +108,7 @@ const DeviceErrorChart = () => {
       chartInstance.current?.dispose()
       chartInstance.current = null
     }
-  }, [data, loading])
+  }, [data, loading, getFriendlyName])
 
   return <div ref={chartRef} style={{ width: '100%', height: '100%' }} />
 }

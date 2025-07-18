@@ -1,7 +1,13 @@
 'use client';
 import useSensorData from './useSensorData';
 
-export default function useGyroscope() {
+interface GyroscopeData {
+  data: Record<string, { time: string; value: number }[]>;
+  loading: boolean;
+  error: Error | null;
+}
+
+export default function useGyroscope(): GyroscopeData {
   const { data, loading, error } = useSensorData();
 
   const grouped: Record<string, { time: string; value: number }[]> = {};

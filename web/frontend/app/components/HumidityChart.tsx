@@ -3,6 +3,7 @@
 import React, { useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import useHumidity from '../hooks/useHumidity';
+import useDeviceNames from '../hooks/useDeviceNames';
 
 const deviceColors = ['#0783FA', '#FF2E2E', '#07D1FA', '#FFD15C', '#20E6A4'];
 const areaColors = [
@@ -14,8 +15,9 @@ const areaColors = [
 ];
 
 export default function HumidityChart() {
-  const chartRef = useRef<any>(null);
+  const chartRef = useRef<ReactECharts | null>(null);
   const { data, loading, error } = useHumidity();
+  const { getFriendlyName } = useDeviceNames();
 
   const isEmpty = !data || Object.keys(data).length === 0;
 
@@ -24,9 +26,8 @@ export default function HumidityChart() {
   if (isEmpty) return <div className="text-white text-sm">暂无数据</div>;
 
   const deviceKeys = Object.keys(data);
-  const totalPoints = data[deviceKeys[0]].length;
 
-  const xLabels = data[deviceKeys[0]].map((d: any) =>
+  const xLabels = data[deviceKeys[0]].map((d: { time: string }) =>
     new Date(d.time).toLocaleTimeString('zh-CN', {
       hour: '2-digit',
       minute: '2-digit',
@@ -35,11 +36,11 @@ export default function HumidityChart() {
   );
 
   const series = deviceKeys.map((key, index) => ({
-    name: key,
+    name: getFriendlyName(key),
     type: 'line' as const,
     smooth: true,
     showSymbol: false,
-    data: data[key].map((d: any) => d.value),
+    data: data[key].map((d: { value: number }) => d.value),
     lineStyle: {
       width: 1.5,
       shadowColor: deviceColors[index % deviceColors.length],

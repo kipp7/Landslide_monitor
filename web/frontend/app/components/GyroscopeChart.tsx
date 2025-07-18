@@ -3,6 +3,7 @@
 import React, { useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import useGyroscope from '../hooks/useGyroscope';
+import useDeviceNames from '../hooks/useDeviceNames';
 
 const deviceColors = ['#0783FA', '#FF2E2E', '#07D1FA', '#FFD15C', '#20E6A4'];
 const areaColors = [
@@ -14,8 +15,10 @@ const areaColors = [
 ];
 
 export default function GyroscopeChart() {
-  const chartRef = useRef<any>(null);
-  const { data, loading, error } = useGyroscope();
+  const chartRef = useRef<ReactECharts | null>(null);
+  const gyroscopeData = useGyroscope();
+  const { data, loading, error } = gyroscopeData;
+  const { getFriendlyName } = useDeviceNames();
 
   const isEmpty = !data || Object.keys(data).length === 0;
   if (loading) return <div className="text-white text-sm">加载中...</div>;
@@ -23,7 +26,6 @@ export default function GyroscopeChart() {
   if (isEmpty) return <div className="text-white text-sm">暂无数据</div>;
 
   const deviceKeys = Object.keys(data);
-  const totalPoints = data[deviceKeys[0]].length;
 
   const xLabels = data[deviceKeys[0]].map((d) =>
     new Date(d.time).toLocaleTimeString('zh-CN', {
@@ -34,7 +36,7 @@ export default function GyroscopeChart() {
   );
 
   const series = deviceKeys.map((key, index) => ({
-    name: key,
+    name: getFriendlyName(key),
     type: 'line' as const,
     smooth: true,
     showSymbol: false,
