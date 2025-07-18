@@ -22,6 +22,7 @@ static_library("landslide_monitor_example") {
     "src/iot_cloud.c",  # 华为云IoT功能
     "src/data_storage.c",  # Flash数据存储功能
     "src/gps_module.c",  # GPS模块功能
+    "src/gps_deformation.c",  # GPS形变分析功能
   ]
 
   include_dirs = [

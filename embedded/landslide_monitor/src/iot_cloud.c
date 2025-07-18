@@ -1480,6 +1480,9 @@ int IoTCloud_SendData(const LandslideIotData *data)
                data->risk_level, data->temperature, data->humidity);
         printf("Motion: X=%.1f° Y=%.1f° | Light=%.1fLux | Alarm=%s\n",
                data->angle_x, data->angle_y, data->light, data->alarm_active ? "ACTIVE" : "NORMAL");
+        printf("GPS: %.6f°, %.6f° (%s) | Altitude=%.1fm\n",
+               data->gps_latitude, data->gps_longitude,
+               data->gps_valid ? "Valid" : "Default", data->gps_altitude);
         printf(" 缓存状态: %d/%d条 | 连接: WiFi=%s MQTT=%s\n",
                g_data_cache.count, MAX_CACHE_SIZE,
                g_connection_status.wifi_connected ? "√" : "×",
@@ -1654,6 +1657,10 @@ void send_msg_to_mqtt(e_iot_data *iot_data)
     cJSON_AddNumberToObject(props, "angle_x", iot_data->angle_x);              // decimal - X轴倾角
     cJSON_AddNumberToObject(props, "angle_y", iot_data->angle_y);              // decimal - Y轴倾角
     cJSON_AddNumberToObject(props, "angle_z", iot_data->angle_z);              // decimal - 总倾斜角度
+
+    // GPS定位数据（decimal类型）
+    cJSON_AddNumberToObject(props, "latitude", iot_data->latitude);            // decimal - 纬度
+    cJSON_AddNumberToObject(props, "longitude", iot_data->longitude);          // decimal - 经度
 
     cJSON_AddItemToObject(service, "properties", props);
     cJSON_AddItemToArray(services, service);

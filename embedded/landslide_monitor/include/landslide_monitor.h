@@ -118,6 +118,7 @@ typedef struct {
     float vibration_risk;       // 振动风险
     float humidity_risk;        // 湿度风险
     float light_risk;           // 光照风险
+    float gps_deform_risk;      // GPS形变风险
 } RiskAssessment;
 
 // 系统状态枚举

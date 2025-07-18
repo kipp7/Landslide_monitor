@@ -31,6 +31,7 @@
 #include "data_storage.h"  // Flash数据存储功能
 #include "reset.h"  // 系统重启功能
 #include "gps_module.h"  // GPS模块功能
+#include "gps_deformation.h"  // GPS形变分析功能
 
 // 全局变量
 static SystemState g_system_state = SYSTEM_STATE_INIT;
@@ -227,6 +228,7 @@ void LandslideMonitorShutdown(void)
     Sensors_Deinit();
     OutputDevices_Deinit();
     GPS_Deinit();
+    GPS_Deformation_Deinit();
     
     // 删除同步对象
     if (g_data_mutex != 0) {
@@ -491,6 +493,15 @@ static int InitializeHardware(void)
         printf("GPS module initialized successfully\n");
     }
 
+    // 初始化GPS形变分析
+    ret = GPS_Deformation_Init();
+    if (ret != 0) {
+        printf("GPS deformation analysis initialization failed: %d (continuing without deformation analysis)\n", ret);
+        // GPS形变分析失败不影响系统运行
+    } else {
+        printf("GPS deformation analysis initialized successfully\n");
+    }
+
     printf("Hardware initialization completed\n");
     return 0;
 }
@@ -619,6 +630,11 @@ static void SensorCollectionTask(void)
                 sensor_data.gps_longitude = gps_data.longitude;
                 sensor_data.gps_altitude = gps_data.altitude;
                 sensor_data.gps_valid = gps_data.valid;
+
+                // 添加GPS数据到形变分析
+                if (gps_data.valid) {
+                    GPS_Deformation_AddPosition(&gps_data);
+                }
             } else {
                 sensor_data.gps_valid = false;
             }
@@ -1004,6 +1020,12 @@ static void AlarmTask(void)
                                          sensor_data.accel_y * sensor_data.accel_y +
                                          sensor_data.accel_z * sensor_data.accel_z);
 
+                // 填充GPS数据
+                iot_data.gps_latitude = sensor_data.gps_latitude;
+                iot_data.gps_longitude = sensor_data.gps_longitude;
+                iot_data.gps_altitude = sensor_data.gps_altitude;
+                iot_data.gps_valid = sensor_data.gps_valid;
+
                 // 填充系统状态
                 iot_data.risk_level = assessment.level;
                 iot_data.alarm_active = (assessment.level >= RISK_LEVEL_MEDIUM);
@@ -1227,12 +1249,34 @@ static void EvaluateRisk(const ProcessedData *processed, RiskAssessment *assessm
     if (assessment->humidity_risk > 1.0f) assessment->humidity_risk = 1.0f;
     total_risk_score += assessment->humidity_risk * 0.2f;
 
-    // 4. 光照风险评估 (权重: 10%)
+    // 4. 光照风险评估 (权重: 5%)
     assessment->light_risk = 0.0f;
     if (processed->light_change_rate > 1000.0f) {
         assessment->light_risk = 0.5f;  // 光照剧烈变化可能表示遮挡
     }
-    total_risk_score += assessment->light_risk * 0.1f;
+    total_risk_score += assessment->light_risk * 0.05f;
+
+    // 5. GPS形变风险评估 (权重: 25%)
+    assessment->gps_deform_risk = 0.0f;
+    DeformationRisk deform_risk = GPS_Deformation_GetRiskLevel();
+    switch (deform_risk) {
+        case DEFORM_RISK_CRITICAL:
+            assessment->gps_deform_risk = 1.0f;
+            break;
+        case DEFORM_RISK_HIGH:
+            assessment->gps_deform_risk = 0.8f;
+            break;
+        case DEFORM_RISK_MEDIUM:
+            assessment->gps_deform_risk = 0.6f;
+            break;
+        case DEFORM_RISK_LOW:
+            assessment->gps_deform_risk = 0.3f;
+            break;
+        default:
+            assessment->gps_deform_risk = 0.0f;
+            break;
+    }
+    total_risk_score += assessment->gps_deform_risk * 0.25f;
 
     // 滑坡监测安全逻辑：一旦触发中等以上风险，只能手动解除
     static RiskLevel raw_level = RISK_LEVEL_SAFE;
