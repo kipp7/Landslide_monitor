@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
+const DataProcessor = require('./data-processor');
+const { deviceMapper } = require('./device-mapper');
 
 const app = express();
 const PORT = 5100;
@@ -40,9 +42,57 @@ app.get('/info', (req, res) => {
     endpoints: {
       health: 'GET /health',
       info: 'GET /info',
-      iot_data: 'POST /iot/huawei'
+      iot_data: 'POST /iot/huawei',
+      device_mappings: 'GET /devices/mappings',
+      device_info: 'GET /devices/:simpleId'
     }
   });
+});
+
+// 设备映射接口
+app.get('/devices/mappings', async (req, res) => {
+  try {
+    const mappings = await deviceMapper.getAllMappings();
+    res.json({
+      success: true,
+      data: mappings,
+      count: mappings.length
+    });
+  } catch (error) {
+    console.error('❌ 获取设备映射失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '获取设备映射失败',
+      message: error.message
+    });
+  }
+});
+
+// 获取特定设备信息
+app.get('/devices/:simpleId', async (req, res) => {
+  try {
+    const { simpleId } = req.params;
+    const deviceName = deviceMapper.getDeviceName(simpleId);
+    const deviceLocation = deviceMapper.getDeviceLocation(simpleId);
+    const actualDeviceId = deviceMapper.getActualDeviceId(simpleId);
+
+    res.json({
+      success: true,
+      data: {
+        simple_id: simpleId,
+        actual_device_id: actualDeviceId,
+        device_name: deviceName,
+        location: deviceLocation
+      }
+    });
+  } catch (error) {
+    console.error('❌ 获取设备信息失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '获取设备信息失败',
+      message: error.message
+    });
+  }
 });
 
 // 华为IoT数据接收接口
@@ -93,21 +143,49 @@ app.post('/iot/huawei', async (req, res) => {
       console.log('属性数据:', properties);
       
       try {
-        // 构造要插入的数据
+        // 获取或创建设备的简洁ID
+        const simpleDeviceId = await deviceMapper.getSimpleId(device_id, {
+          device_name: `监测站-${device_id.slice(-6)}`,
+          location_name: '防城港华石镇',
+          latitude: properties.latitude,
+          longitude: properties.longitude
+        });
+
+        // 构造要插入到 iot_data 表的数据（使用简洁设备ID）
         const sensorData = {
-          device_id: device_id,
-          product_id: product_id,
-          service_id: service_id,
+          // 基本字段 - 使用简洁的设备ID
+          device_id: simpleDeviceId,
           event_time: formatEventTime(serviceEventTime || event_time),
-          resource: resource,
-          event_type: event,
-          // 展开所有属性
-          ...properties,
-          // 保存原始数据
-          raw_data: req.body,
-          // 添加创建时间
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+
+          // 传感器数据字段 - 直接映射
+          temperature: properties.temperature,
+          humidity: properties.humidity,
+          illumination: properties.illumination,
+          acceleration_x: properties.acceleration_x ? parseInt(properties.acceleration_x) : null,
+          acceleration_y: properties.acceleration_y ? parseInt(properties.acceleration_y) : null,
+          acceleration_z: properties.acceleration_z ? parseInt(properties.acceleration_z) : null,
+          gyroscope_x: properties.gyroscope_x ? parseInt(properties.gyroscope_x) : null,
+          gyroscope_y: properties.gyroscope_y ? parseInt(properties.gyroscope_y) : null,
+          gyroscope_z: properties.gyroscope_z ? parseInt(properties.gyroscope_z) : null,
+          mpu_temperature: properties.mpu_temperature,
+          latitude: properties.latitude,
+          longitude: properties.longitude,
+          vibration: properties.vibration ? parseInt(properties.vibration) : null,
+
+          // 计算字段
+          acceleration_total: calculateTotal(properties.acceleration_x, properties.acceleration_y, properties.acceleration_z),
+          gyroscope_total: calculateTotal(properties.gyroscope_x, properties.gyroscope_y, properties.gyroscope_z),
+
+          // 新增字段（需要先在iot_data表中添加这些列）
+          risk_level: properties.risk_level,
+          alarm_active: properties.alarm_active,
+          uptime: properties.uptime,
+          angle_x: properties.angle_x,
+          angle_y: properties.angle_y,
+          angle_z: properties.angle_z,
+
+          // 超声波距离（如果有的话）
+          ultrasonic_distance: properties.ultrasonic_distance
         };
 
         // 移除undefined值
@@ -119,9 +197,9 @@ app.post('/iot/huawei', async (req, res) => {
 
         console.log('📝 准备插入数据:', sensorData);
 
-        // 插入到Supabase数据库
+        // 插入到Supabase数据库的 iot_data 表
         const { data, error } = await supabase
-          .from('huawei_iot_data')
+          .from('iot_data')
           .insert([sensorData])
           .select();
 
@@ -171,6 +249,19 @@ app.post('/iot/huawei', async (req, res) => {
     });
   }
 });
+
+// 计算三轴数据的总值
+function calculateTotal(x, y, z) {
+  if (x === undefined || y === undefined || z === undefined) {
+    return null;
+  }
+
+  const numX = parseFloat(x) || 0;
+  const numY = parseFloat(y) || 0;
+  const numZ = parseFloat(z) || 0;
+
+  return Math.sqrt(numX * numX + numY * numY + numZ * numZ);
+}
 
 // 格式化事件时间
 function formatEventTime(eventTime) {
@@ -232,7 +323,7 @@ app.use((error, req, res, next) => {
 });
 
 // 启动服务器
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', async () => {
   console.log('🏔️  滑坡监测IoT服务已启动');
   console.log(`📡 端口: ${PORT}`);
   console.log(`🌐 健康检查: http://localhost:${PORT}/health`);
@@ -240,6 +331,23 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`📨 IoT数据接收: http://localhost:${PORT}/iot/huawei`);
   console.log('⏰ 启动时间:', new Date().toISOString());
   console.log('=====================================');
+
+  // 启动设备映射器
+  try {
+    await deviceMapper.initializeCache();
+    console.log('✅ 设备映射器初始化成功');
+  } catch (error) {
+    console.error('❌ 设备映射器初始化失败:', error);
+  }
+
+  // 启动数据处理器
+  try {
+    const processor = new DataProcessor();
+    await processor.start();
+    console.log('✅ 数据处理器启动成功');
+  } catch (error) {
+    console.error('❌ 数据处理器启动失败:', error);
+  }
 });
 
 // 优雅关闭

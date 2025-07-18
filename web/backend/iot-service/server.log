@@ -3,60 +3,5607 @@
 🌐 健康检查: http://localhost:5100/health
 📊 服务信息: http://localhost:5100/info
 📨 IoT数据接收: http://localhost:5100/iot/huawei
-⏰ 启动时间: 2025-07-17T09:03:42.258Z
+⏰ 启动时间: 2025-07-18T12:28:49.412Z
 =====================================
+✅ 设备映射缓存初始化完成，加载了 1 个设备映射
+✅ 设备映射器初始化成功
+🔄 启动数据处理器...
+📱 初始化设备信息...
+✅ 设备注册成功: 龙门滑坡监测站3 (6_rk2206)
+📍 设备位置更新: 龙门滑坡监测站5 (6_rk2206) (22.817, 108.3669)
+✅ 初始化了 1 个设备
+🔄 启动实时数据处理...
+✅ 数据处理器启动成功
 === 收到华为IoT数据 ===
-时间: 2025-07-17T09:04:10.307Z
+时间: 2025-07-18T12:29:08.715Z
 数据: {
   "resource": "device.property",
   "event": "report",
-  "event_time": "20240117T120000Z",
+  "event_time": "20250718T122908Z",
+  "event_time_ms": "2025-07-18T12:29:08.555Z",
+  "request_id": "703b1548-823a-49cd-820d-1aed873da000",
   "notify_data": {
     "header": {
-      "device_id": "test-device-002",
-      "product_id": "landslide-monitor"
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
     },
     "body": {
       "services": [
         {
-          "service_id": "sensor_data",
+          "service_id": "smartHome",
           "properties": {
-            "temperature": 26.8,
-            "humidity": 58.3
-          }
+            "temperature": 31.48088836669922,
+            "illumination": 74.16666412353516,
+            "humidity": 34.72800827026367,
+            "acceleration_x": 9,
+            "acceleration_y": 35,
+            "acceleration_z": 865,
+            "gyroscope_x": -154,
+            "gyroscope_y": 51,
+            "gyroscope_z": -127,
+            "mpu_temperature": 31.48088836669922,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8659984469413757,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 1281,
+            "angle_x": 2.31854772567749,
+            "angle_y": -0.6466517448425293,
+            "angle_z": 2.407035943926087
+          },
+          "event_time": "20250718T122908Z"
         }
       ]
     }
   }
 }
-📱 设备ID: test-device-002
-📦 产品ID: landslide-monitor
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
 🔧 服务数量: 1
 
-🔄 处理服务: sensor_data
-属性数据: { temperature: 26.8, humidity: 58.3 }
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.48088836669922,
+  illumination: 74.16666412353516,
+  humidity: 34.72800827026367,
+  acceleration_x: 9,
+  acceleration_y: 35,
+  acceleration_z: 865,
+  gyroscope_x: -154,
+  gyroscope_y: 51,
+  gyroscope_z: -127,
+  mpu_temperature: 31.48088836669922,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8659984469413757,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1281,
+  angle_x: 2.31854772567749,
+  angle_y: -0.6466517448425293,
+  angle_z: 2.407035943926087
+}
 📝 准备插入数据: {
-  device_id: 'test-device-002',
-  product_id: 'landslide-monitor',
-  service_id: 'sensor_data',
-  event_time: '2024-01-17T12:00:00.000Z',
-  resource: 'device.property',
-  event_type: 'report',
-  temperature: 26.8,
-  humidity: 58.3,
-  raw_data: {
-    resource: 'device.property',
-    event: 'report',
-    event_time: '20240117T120000Z',
-    notify_data: { header: [Object], body: [Object] }
-  },
-  created_at: '2025-07-17T09:04:10.308Z',
-  updated_at: '2025-07-17T09:04:10.308Z'
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:29:08.000Z',
+  temperature: 31.48088836669922,
+  humidity: 34.72800827026367,
+  illumination: 74.16666412353516,
+  acceleration_x: 9,
+  acceleration_y: 35,
+  acceleration_z: 865,
+  gyroscope_x: -154,
+  gyroscope_y: 51,
+  gyroscope_z: -127,
+  mpu_temperature: 31.48088836669922,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 865.7545841634337,
+  gyroscope_total: 206.0242704149198,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1281,
+  angle_x: 2.31854772567749,
+  angle_y: -0.6466517448425293,
+  angle_z: 2.407035943926087
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13352
+
+⏱️  处理完成，耗时: 1055ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:29:38.902Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T122938Z",
+  "event_time_ms": "2025-07-18T12:29:38.728Z",
+  "request_id": "c2f0f87f-0a70-44b6-8076-6aa1f159fc80",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.494239807128906,
+            "illumination": 74.16666412353516,
+            "humidity": 35.12168884277344,
+            "acceleration_x": 9,
+            "acceleration_y": 32,
+            "acceleration_z": 868,
+            "gyroscope_x": -151,
+            "gyroscope_y": 43,
+            "gyroscope_z": -125,
+            "mpu_temperature": 31.494239807128906,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8689420223236084,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 1311,
+            "angle_x": 2.1334779262542725,
+            "angle_y": -0.6363251209259033,
+            "angle_z": 2.2263507633200113
+          },
+          "event_time": "20250718T122938Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.494239807128906,
+  illumination: 74.16666412353516,
+  humidity: 35.12168884277344,
+  acceleration_x: 9,
+  acceleration_y: 32,
+  acceleration_z: 868,
+  gyroscope_x: -151,
+  gyroscope_y: 43,
+  gyroscope_z: -125,
+  mpu_temperature: 31.494239807128906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8689420223236084,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1311,
+  angle_x: 2.1334779262542725,
+  angle_y: -0.6363251209259033,
+  angle_z: 2.2263507633200113
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:29:38.000Z',
+  temperature: 31.494239807128906,
+  humidity: 35.12168884277344,
+  illumination: 74.16666412353516,
+  acceleration_x: 9,
+  acceleration_y: 32,
+  acceleration_z: 868,
+  gyroscope_x: -151,
+  gyroscope_y: 43,
+  gyroscope_z: -125,
+  mpu_temperature: 31.494239807128906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 868.6362875219985,
+  gyroscope_total: 200.6863224038948,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1311,
+  angle_x: 2.1334779262542725,
+  angle_y: -0.6363251209259033,
+  angle_z: 2.2263507633200113
 }
 ✅ 数据插入成功
-插入的记录ID: 5
+插入的记录ID: 13353
 
-⏱️  处理完成，耗时: 8101ms
+⏱️  处理完成，耗时: 982ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+📨 收到新的IoT数据，开始处理...
+🔄 处理 100 条历史数据...
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:30:09.020Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T123008Z",
+  "event_time_ms": "2025-07-18T12:30:08.907Z",
+  "request_id": "f9b121f1-e119-4359-ad99-417c687bd099",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.507591247558594,
+            "illumination": 80.8333282470703,
+            "humidity": 34.99809265136719,
+            "acceleration_x": 10,
+            "acceleration_y": 35,
+            "acceleration_z": 866,
+            "gyroscope_x": -152,
+            "gyroscope_y": 51,
+            "gyroscope_z": -128,
+            "mpu_temperature": 31.507591247558594,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.867466151714325,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 1341,
+            "angle_x": 2.314622640609741,
+            "angle_y": -0.6697652339935303,
+            "angle_z": 2.4095774395295164
+          },
+          "event_time": "20250718T123008Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.507591247558594,
+  illumination: 80.8333282470703,
+  humidity: 34.99809265136719,
+  acceleration_x: 10,
+  acceleration_y: 35,
+  acceleration_z: 866,
+  gyroscope_x: -152,
+  gyroscope_y: 51,
+  gyroscope_z: -128,
+  mpu_temperature: 31.507591247558594,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.867466151714325,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1341,
+  angle_x: 2.314622640609741,
+  angle_y: -0.6697652339935303,
+  angle_z: 2.4095774395295164
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:30:08.000Z',
+  temperature: 31.507591247558594,
+  humidity: 34.99809265136719,
+  illumination: 80.8333282470703,
+  acceleration_x: 10,
+  acceleration_y: 35,
+  acceleration_z: 866,
+  gyroscope_x: -152,
+  gyroscope_y: 51,
+  gyroscope_z: -128,
+  mpu_temperature: 31.507591247558594,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 866.7646739455871,
+  gyroscope_total: 205.15603817582362,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1341,
+  angle_x: 2.314622640609741,
+  angle_y: -0.6697652339935303,
+  angle_z: 2.4095774395295164
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13354
+
+⏱️  处理完成，耗时: 513ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:30:39.058Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T123038Z",
+  "event_time_ms": "2025-07-18T12:30:38.898Z",
+  "request_id": "66b56a1e-bc3b-4bf4-97dd-c2e9ae2878fc",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.507591247558594,
+            "illumination": 80.8333282470703,
+            "humidity": 34.81345748901367,
+            "acceleration_x": 7,
+            "acceleration_y": 34,
+            "acceleration_z": 869,
+            "gyroscope_x": -151,
+            "gyroscope_y": 48,
+            "gyroscope_z": -124,
+            "mpu_temperature": 31.507591247558594,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.870350956916809,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 1371,
+            "angle_x": 2.2747769355773926,
+            "angle_y": -0.5227571725845337,
+            "angle_z": 2.3340705148138623
+          },
+          "event_time": "20250718T123038Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.507591247558594,
+  illumination: 80.8333282470703,
+  humidity: 34.81345748901367,
+  acceleration_x: 7,
+  acceleration_y: 34,
+  acceleration_z: 869,
+  gyroscope_x: -151,
+  gyroscope_y: 48,
+  gyroscope_z: -124,
+  mpu_temperature: 31.507591247558594,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.870350956916809,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1371,
+  angle_x: 2.2747769355773926,
+  angle_y: -0.5227571725845337,
+  angle_z: 2.3340705148138623
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:30:38.000Z',
+  temperature: 31.507591247558594,
+  humidity: 34.81345748901367,
+  illumination: 80.8333282470703,
+  acceleration_x: 7,
+  acceleration_y: 34,
+  acceleration_z: 869,
+  gyroscope_x: -151,
+  gyroscope_y: 48,
+  gyroscope_z: -124,
+  mpu_temperature: 31.507591247558594,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 869.693049299579,
+  gyroscope_total: 201.19890655766497,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1371,
+  angle_x: 2.2747769355773926,
+  angle_y: -0.5227571725845337,
+  angle_z: 2.3340705148138623
+}
+✅ 数据插入成功
+插入的记录ID: 13355
+
+⏱️  处理完成，耗时: 383ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+📨 收到新的IoT数据，开始处理...
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:31:09.099Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T123108Z",
+  "event_time_ms": "2025-07-18T12:31:08.977Z",
+  "request_id": "bd046573-3619-43a5-8054-b9177edfdf65",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.52094268798828,
+            "illumination": 80.8333282470703,
+            "humidity": 35.2498664855957,
+            "acceleration_x": 8,
+            "acceleration_y": 33,
+            "acceleration_z": 864,
+            "gyroscope_x": -153,
+            "gyroscope_y": 45,
+            "gyroscope_z": -131,
+            "mpu_temperature": 31.52094268798828,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8655452132225037,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 1401,
+            "angle_x": 2.1903727054595947,
+            "angle_y": -0.5822376608848572,
+            "angle_z": 2.2664362516018524
+          },
+          "event_time": "20250718T123108Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.52094268798828,
+  illumination: 80.8333282470703,
+  humidity: 35.2498664855957,
+  acceleration_x: 8,
+  acceleration_y: 33,
+  acceleration_z: 864,
+  gyroscope_x: -153,
+  gyroscope_y: 45,
+  gyroscope_z: -131,
+  mpu_temperature: 31.52094268798828,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8655452132225037,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1401,
+  angle_x: 2.1903727054595947,
+  angle_y: -0.5822376608848572,
+  angle_z: 2.2664362516018524
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:31:08.000Z',
+  temperature: 31.52094268798828,
+  humidity: 35.2498664855957,
+  illumination: 80.8333282470703,
+  acceleration_x: 8,
+  acceleration_y: 33,
+  acceleration_z: 864,
+  gyroscope_x: -153,
+  gyroscope_y: 45,
+  gyroscope_z: -131,
+  mpu_temperature: 31.52094268798828,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 864.6669879207833,
+  gyroscope_total: 206.3855615104894,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1401,
+  angle_x: 2.1903727054595947,
+  angle_y: -0.5822376608848572,
+  angle_z: 2.2664362516018524
+}
+✅ 数据插入成功
+插入的记录ID: 13356
+
+⏱️  处理完成，耗时: 537ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+📨 收到新的IoT数据，开始处理...
+✅ 历史数据处理完成，最新ID: 100
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:31:39.627Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T123139Z",
+  "event_time_ms": "2025-07-18T12:31:39.447Z",
+  "request_id": "e619965c-6821-45be-92ae-14ca124a06af",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.536964416503906,
+            "illumination": 74.16666412353516,
+            "humidity": 35.30937576293945,
+            "acceleration_x": 11,
+            "acceleration_y": 35,
+            "acceleration_z": 866,
+            "gyroscope_x": -149,
+            "gyroscope_y": 50,
+            "gyroscope_z": -129,
+            "mpu_temperature": 31.536964416503906,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.867278814315796,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 1432,
+            "angle_x": 2.3716211318969727,
+            "angle_y": -0.782945215702057,
+            "angle_z": 2.4975167675214953
+          },
+          "event_time": "20250718T123139Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.536964416503906,
+  illumination: 74.16666412353516,
+  humidity: 35.30937576293945,
+  acceleration_x: 11,
+  acceleration_y: 35,
+  acceleration_z: 866,
+  gyroscope_x: -149,
+  gyroscope_y: 50,
+  gyroscope_z: -129,
+  mpu_temperature: 31.536964416503906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.867278814315796,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1432,
+  angle_x: 2.3716211318969727,
+  angle_y: -0.782945215702057,
+  angle_z: 2.4975167675214953
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:31:39.000Z',
+  temperature: 31.536964416503906,
+  humidity: 35.30937576293945,
+  illumination: 74.16666412353516,
+  acceleration_x: 11,
+  acceleration_y: 35,
+  acceleration_z: 866,
+  gyroscope_x: -149,
+  gyroscope_y: 50,
+  gyroscope_z: -129,
+  mpu_temperature: 31.536964416503906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 866.776787875633,
+  gyroscope_total: 203.32732231552157,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1432,
+  angle_x: 2.3716211318969727,
+  angle_y: -0.782945215702057,
+  angle_z: 2.4975167675214953
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13357
+
+⏱️  处理完成，耗时: 469ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+🔄 处理 100 条历史数据...
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:32:09.602Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T123209Z",
+  "event_time_ms": "2025-07-18T12:32:09.445Z",
+  "request_id": "ce3d1987-280e-42fb-9168-24e0943eb838",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.56633758544922,
+            "illumination": 74.16666412353516,
+            "humidity": 35.01640319824219,
+            "acceleration_x": 7,
+            "acceleration_y": 33,
+            "acceleration_z": 869,
+            "gyroscope_x": -149,
+            "gyroscope_y": 54,
+            "gyroscope_z": -125,
+            "mpu_temperature": 31.56633758544922,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8700427412986755,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 1462,
+            "angle_x": 2.179044246673584,
+            "angle_y": -0.4665938913822174,
+            "angle_z": 2.228439743057112
+          },
+          "event_time": "20250718T123209Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.56633758544922,
+  illumination: 74.16666412353516,
+  humidity: 35.01640319824219,
+  acceleration_x: 7,
+  acceleration_y: 33,
+  acceleration_z: 869,
+  gyroscope_x: -149,
+  gyroscope_y: 54,
+  gyroscope_z: -125,
+  mpu_temperature: 31.56633758544922,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8700427412986755,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1462,
+  angle_x: 2.179044246673584,
+  angle_y: -0.4665938913822174,
+  angle_z: 2.228439743057112
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:32:09.000Z',
+  temperature: 31.56633758544922,
+  humidity: 35.01640319824219,
+  illumination: 74.16666412353516,
+  acceleration_x: 7,
+  acceleration_y: 33,
+  acceleration_z: 869,
+  gyroscope_x: -149,
+  gyroscope_y: 54,
+  gyroscope_z: -125,
+  mpu_temperature: 31.56633758544922,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 869.654529109117,
+  gyroscope_total: 201.84647631306325,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1462,
+  angle_x: 2.179044246673584,
+  angle_y: -0.4665938913822174,
+  angle_z: 2.228439743057112
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13358
+
+⏱️  处理完成，耗时: 515ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:32:39.605Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T123239Z",
+  "event_time_ms": "2025-07-18T12:32:39.425Z",
+  "request_id": "f64413a2-8ebd-4cf9-a3e9-329d275e876f",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.56633758544922,
+            "illumination": 74.16666412353516,
+            "humidity": 35.01640319824219,
+            "acceleration_x": 8,
+            "acceleration_y": 34,
+            "acceleration_z": 864,
+            "gyroscope_x": -154,
+            "gyroscope_y": 56,
+            "gyroscope_z": -127,
+            "mpu_temperature": 31.56633758544922,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8651123046875,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 1492,
+            "angle_x": 2.296649932861328,
+            "angle_y": -0.5340222716331482,
+            "angle_z": 2.35791872224472
+          },
+          "event_time": "20250718T123239Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.56633758544922,
+  illumination: 74.16666412353516,
+  humidity: 35.01640319824219,
+  acceleration_x: 8,
+  acceleration_y: 34,
+  acceleration_z: 864,
+  gyroscope_x: -154,
+  gyroscope_y: 56,
+  gyroscope_z: -127,
+  mpu_temperature: 31.56633758544922,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8651123046875,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1492,
+  angle_x: 2.296649932861328,
+  angle_y: -0.5340222716331482,
+  angle_z: 2.35791872224472
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:32:39.000Z',
+  temperature: 31.56633758544922,
+  humidity: 35.01640319824219,
+  illumination: 74.16666412353516,
+  acceleration_x: 8,
+  acceleration_y: 34,
+  acceleration_z: 864,
+  gyroscope_x: -154,
+  gyroscope_y: 56,
+  gyroscope_z: -127,
+  mpu_temperature: 31.56633758544922,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 864.7057302921035,
+  gyroscope_total: 207.31859540330674,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1492,
+  angle_x: 2.296649932861328,
+  angle_y: -0.5340222716331482,
+  angle_z: 2.35791872224472
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13359
+
+⏱️  处理完成，耗时: 527ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:33:09.926Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T123309Z",
+  "event_time_ms": "2025-07-18T12:33:09.767Z",
+  "request_id": "9e6c51db-7175-4d37-bfda-9eb337c22592",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.536964416503906,
+            "illumination": 74.16666412353516,
+            "humidity": 34.92790222167969,
+            "acceleration_x": 4,
+            "acceleration_y": 34,
+            "acceleration_z": 871,
+            "gyroscope_x": -153,
+            "gyroscope_y": 43,
+            "gyroscope_z": -122,
+            "mpu_temperature": 31.536964416503906,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.872641146183014,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 1522,
+            "angle_x": 2.2607827186584473,
+            "angle_y": -0.3208465874195099,
+            "angle_z": 2.2834362337589864
+          },
+          "event_time": "20250718T123309Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.536964416503906,
+  illumination: 74.16666412353516,
+  humidity: 34.92790222167969,
+  acceleration_x: 4,
+  acceleration_y: 34,
+  acceleration_z: 871,
+  gyroscope_x: -153,
+  gyroscope_y: 43,
+  gyroscope_z: -122,
+  mpu_temperature: 31.536964416503906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.872641146183014,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1522,
+  angle_x: 2.2607827186584473,
+  angle_y: -0.3208465874195099,
+  angle_z: 2.2834362337589864
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:33:09.000Z',
+  temperature: 31.536964416503906,
+  humidity: 34.92790222167969,
+  illumination: 74.16666412353516,
+  acceleration_x: 4,
+  acceleration_y: 34,
+  acceleration_z: 871,
+  gyroscope_x: -153,
+  gyroscope_y: 43,
+  gyroscope_z: -122,
+  mpu_temperature: 31.536964416503906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 871.6725302543381,
+  gyroscope_total: 200.35468549549822,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1522,
+  angle_x: 2.2607827186584473,
+  angle_y: -0.3208465874195099,
+  angle_z: 2.2834362337589864
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13360
+
+⏱️  处理完成，耗时: 549ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+❌ 更新设备活跃时间失败: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '    at node:internal/deps/undici/undici:12637:11\n' +
+    '    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n' +
+    '    at async DataProcessor.updateDeviceActivity (/home/k7/Landslide_monitor/web/backend/iot-service/data-processor.js:180:25)\n' +
+    '    at async DataProcessor.processNewData (/home/k7/Landslide_monitor/web/backend/iot-service/data-processor.js:162:7)\n' +
+    '    at async Object.callback (/home/k7/Landslide_monitor/web/backend/iot-service/data-processor.js:148:11)',
+  hint: '',
+  code: ''
+}
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:33:40.130Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T123339Z",
+  "event_time_ms": "2025-07-18T12:33:39.965Z",
+  "request_id": "845b47f9-b201-41b6-b46e-cf00d947e18a",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.56633758544922,
+            "illumination": 74.16666412353516,
+            "humidity": 35.01640319824219,
+            "acceleration_x": 8,
+            "acceleration_y": 31,
+            "acceleration_z": 867,
+            "gyroscope_x": -153,
+            "gyroscope_y": 51,
+            "gyroscope_z": -128,
+            "mpu_temperature": 31.56633758544922,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.868424355983734,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 1552,
+            "angle_x": 2.110572099685669,
+            "angle_y": -0.5319191217422485,
+            "angle_z": 2.17656898352582
+          },
+          "event_time": "20250718T123339Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.56633758544922,
+  illumination: 74.16666412353516,
+  humidity: 35.01640319824219,
+  acceleration_x: 8,
+  acceleration_y: 31,
+  acceleration_z: 867,
+  gyroscope_x: -153,
+  gyroscope_y: 51,
+  gyroscope_z: -128,
+  mpu_temperature: 31.56633758544922,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.868424355983734,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1552,
+  angle_x: 2.110572099685669,
+  angle_y: -0.5319191217422485,
+  angle_z: 2.17656898352582
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:33:39.000Z',
+  temperature: 31.56633758544922,
+  humidity: 35.01640319824219,
+  illumination: 74.16666412353516,
+  acceleration_x: 8,
+  acceleration_y: 31,
+  acceleration_z: 867,
+  gyroscope_x: -153,
+  gyroscope_y: 51,
+  gyroscope_z: -128,
+  mpu_temperature: 31.56633758544922,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 867.5909174259491,
+  gyroscope_total: 205.89803301634527,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1552,
+  angle_x: 2.110572099685669,
+  angle_y: -0.5319191217422485,
+  angle_z: 2.17656898352582
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13361
+
+⏱️  处理完成，耗时: 524ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+✅ 历史数据处理完成，最新ID: 200
+🔍 检查设备离线状态...
+🔄 处理 100 条历史数据...
+⚠️  发现 6 个离线设备
+📵 设备离线: 兰草监测设备 (77035712) (179796分钟)
+📵 设备离线: 上坪监测设备 (vice_006) (179158分钟)
+📵 设备离线: 下湾监测设备 (vice_007) (179153分钟)
+📵 设备离线: 前岗监测设备 (vice_008) (179148分钟)
+📵 设备离线: 上坪监测设备1 (t_device) (68997分钟)
+📵 设备离线: 龙门滑坡监测站 (5分钟)
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:34:10.239Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T123410Z",
+  "event_time_ms": "2025-07-18T12:34:10.087Z",
+  "request_id": "a9f40422-c491-4ee2-afe6-40db176629fb",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.550315856933594,
+            "illumination": 74.16666412353516,
+            "humidity": 34.87449264526367,
+            "acceleration_x": 8,
+            "acceleration_y": 35,
+            "acceleration_z": 862,
+            "gyroscope_x": -151,
+            "gyroscope_y": 45,
+            "gyroscope_z": -128,
+            "mpu_temperature": 31.550315856933594,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8630860447883606,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 1582,
+            "angle_x": 2.3750381469726562,
+            "angle_y": -0.5515278577804565,
+            "angle_z": 2.4382348487139645
+          },
+          "event_time": "20250718T123410Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.550315856933594,
+  illumination: 74.16666412353516,
+  humidity: 34.87449264526367,
+  acceleration_x: 8,
+  acceleration_y: 35,
+  acceleration_z: 862,
+  gyroscope_x: -151,
+  gyroscope_y: 45,
+  gyroscope_z: -128,
+  mpu_temperature: 31.550315856933594,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8630860447883606,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1582,
+  angle_x: 2.3750381469726562,
+  angle_y: -0.5515278577804565,
+  angle_z: 2.4382348487139645
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:34:10.000Z',
+  temperature: 31.550315856933594,
+  humidity: 34.87449264526367,
+  illumination: 74.16666412353516,
+  acceleration_x: 8,
+  acceleration_y: 35,
+  acceleration_z: 862,
+  gyroscope_x: -151,
+  gyroscope_y: 45,
+  gyroscope_z: -128,
+  mpu_temperature: 31.550315856933594,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 862.7473558348354,
+  gyroscope_total: 203.00246303924493,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1582,
+  angle_x: 2.3750381469726562,
+  angle_y: -0.5515278577804565,
+  angle_z: 2.4382348487139645
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13362
+
+⏱️  处理完成，耗时: 605ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+❌ 更新风险趋势失败: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '    at node:internal/deps/undici/undici:12637:11\n' +
+    '    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n' +
+    '    at async DataProcessor.updateRiskTrends (/home/k7/Landslide_monitor/web/backend/iot-service/data-processor.js:356:27)\n' +
+    '    at async DataProcessor.processNewData (/home/k7/Landslide_monitor/web/backend/iot-service/data-processor.js:168:7)\n' +
+    '    at async DataProcessor.processHistoricalData (/home/k7/Landslide_monitor/web/backend/iot-service/data-processor.js:398:11)',
+  hint: '',
+  code: ''
+}
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:34:40.142Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T123440Z",
+  "event_time_ms": "2025-07-18T12:34:40.033Z",
+  "request_id": "8e7adf24-5b3e-4c3c-abe6-66fb942c79b9",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.56633758544922,
+            "illumination": 73.3333282470703,
+            "humidity": 34.67765426635742,
+            "acceleration_x": 8,
+            "acceleration_y": 32,
+            "acceleration_z": 867,
+            "gyroscope_x": -154,
+            "gyroscope_y": 45,
+            "gyroscope_z": -129,
+            "mpu_temperature": 31.56633758544922,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8685725331306458,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 1612,
+            "angle_x": 2.15050196647644,
+            "angle_y": -0.556017518043518,
+            "angle_z": 2.2212190770363716
+          },
+          "event_time": "20250718T123440Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.56633758544922,
+  illumination: 73.3333282470703,
+  humidity: 34.67765426635742,
+  acceleration_x: 8,
+  acceleration_y: 32,
+  acceleration_z: 867,
+  gyroscope_x: -154,
+  gyroscope_y: 45,
+  gyroscope_z: -129,
+  mpu_temperature: 31.56633758544922,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8685725331306458,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1612,
+  angle_x: 2.15050196647644,
+  angle_y: -0.556017518043518,
+  angle_z: 2.2212190770363716
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:34:40.000Z',
+  temperature: 31.56633758544922,
+  humidity: 34.67765426635742,
+  illumination: 73.3333282470703,
+  acceleration_x: 8,
+  acceleration_y: 32,
+  acceleration_z: 867,
+  gyroscope_x: -154,
+  gyroscope_y: 45,
+  gyroscope_z: -129,
+  mpu_temperature: 31.56633758544922,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 867.6272241003045,
+  gyroscope_total: 205.8688903161427,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1612,
+  angle_x: 2.15050196647644,
+  angle_y: -0.556017518043518,
+  angle_z: 2.2212190770363716
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13363
+
+⏱️  处理完成，耗时: 1155ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:35:10.316Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T123510Z",
+  "event_time_ms": "2025-07-18T12:35:10.188Z",
+  "request_id": "5d55cdfe-6905-4f49-922d-39fb7e8636f1",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.550315856933594,
+            "illumination": 74.16666412353516,
+            "humidity": 34.87449264526367,
+            "acceleration_x": 9,
+            "acceleration_y": 34,
+            "acceleration_z": 866,
+            "gyroscope_x": -151,
+            "gyroscope_y": 54,
+            "gyroscope_z": -132,
+            "mpu_temperature": 31.550315856933594,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8670759797096252,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 1642,
+            "angle_x": 2.2914459705352783,
+            "angle_y": -0.6135427355766296,
+            "angle_z": 2.37216342697151
+          },
+          "event_time": "20250718T123510Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.550315856933594,
+  illumination: 74.16666412353516,
+  humidity: 34.87449264526367,
+  acceleration_x: 9,
+  acceleration_y: 34,
+  acceleration_z: 866,
+  gyroscope_x: -151,
+  gyroscope_y: 54,
+  gyroscope_z: -132,
+  mpu_temperature: 31.550315856933594,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8670759797096252,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1642,
+  angle_x: 2.2914459705352783,
+  angle_y: -0.6135427355766296,
+  angle_z: 2.37216342697151
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:35:10.000Z',
+  temperature: 31.550315856933594,
+  humidity: 34.87449264526367,
+  illumination: 74.16666412353516,
+  acceleration_x: 9,
+  acceleration_y: 34,
+  acceleration_z: 866,
+  gyroscope_x: -151,
+  gyroscope_y: 54,
+  gyroscope_z: -132,
+  mpu_temperature: 31.550315856933594,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 866.713908968813,
+  gyroscope_total: 207.70411647341032,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1642,
+  angle_x: 2.2914459705352783,
+  angle_y: -0.6135427355766296,
+  angle_z: 2.37216342697151
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13364
+
+⏱️  处理完成，耗时: 627ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:35:40.454Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T123540Z",
+  "event_time_ms": "2025-07-18T12:35:40.327Z",
+  "request_id": "7e02c115-5f03-4826-92c3-13efd4deeefe",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.52094268798828,
+            "illumination": 74.16666412353516,
+            "humidity": 35.02861022949219,
+            "acceleration_x": 8,
+            "acceleration_y": 33,
+            "acceleration_z": 865,
+            "gyroscope_x": -156,
+            "gyroscope_y": 48,
+            "gyroscope_z": -126,
+            "mpu_temperature": 31.52094268798828,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8661773800849915,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 1672,
+            "angle_x": 2.2291767597198486,
+            "angle_y": -0.5737468004226685,
+            "angle_z": 2.301828494278045
+          },
+          "event_time": "20250718T123540Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.52094268798828,
+  illumination: 74.16666412353516,
+  humidity: 35.02861022949219,
+  acceleration_x: 8,
+  acceleration_y: 33,
+  acceleration_z: 865,
+  gyroscope_x: -156,
+  gyroscope_y: 48,
+  gyroscope_z: -126,
+  mpu_temperature: 31.52094268798828,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8661773800849915,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1672,
+  angle_x: 2.2291767597198486,
+  angle_y: -0.5737468004226685,
+  angle_z: 2.301828494278045
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:35:40.000Z',
+  temperature: 31.52094268798828,
+  humidity: 35.02861022949219,
+  illumination: 74.16666412353516,
+  acceleration_x: 8,
+  acceleration_y: 33,
+  acceleration_z: 865,
+  gyroscope_x: -156,
+  gyroscope_y: 48,
+  gyroscope_z: -126,
+  mpu_temperature: 31.52094268798828,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 865.6662174302518,
+  gyroscope_total: 206.194083329275,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1672,
+  angle_x: 2.2291767597198486,
+  angle_y: -0.5737468004226685,
+  angle_z: 2.301828494278045
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13365
+
+⏱️  处理完成，耗时: 1144ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:36:10.955Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T123610Z",
+  "event_time_ms": "2025-07-18T12:36:10.797Z",
+  "request_id": "220e0cbc-24bf-4e26-ad42-4b040612d67b",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.56633758544922,
+            "illumination": 73.3333282470703,
+            "humidity": 35.12932205200195,
+            "acceleration_x": 4,
+            "acceleration_y": 32,
+            "acceleration_z": 866,
+            "gyroscope_x": -158,
+            "gyroscope_y": 41,
+            "gyroscope_z": -131,
+            "mpu_temperature": 31.56633758544922,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8670842051506042,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 1702,
+            "angle_x": 2.162266969680786,
+            "angle_y": -0.298665076494217,
+            "angle_z": 2.182796205808006
+          },
+          "event_time": "20250718T123610Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.56633758544922,
+  illumination: 73.3333282470703,
+  humidity: 35.12932205200195,
+  acceleration_x: 4,
+  acceleration_y: 32,
+  acceleration_z: 866,
+  gyroscope_x: -158,
+  gyroscope_y: 41,
+  gyroscope_z: -131,
+  mpu_temperature: 31.56633758544922,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8670842051506042,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1702,
+  angle_x: 2.162266969680786,
+  angle_y: -0.298665076494217,
+  angle_z: 2.182796205808006
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:36:10.000Z',
+  temperature: 31.56633758544922,
+  humidity: 35.12932205200195,
+  illumination: 73.3333282470703,
+  acceleration_x: 4,
+  acceleration_y: 32,
+  acceleration_z: 866,
+  gyroscope_x: -158,
+  gyroscope_y: 41,
+  gyroscope_z: -131,
+  mpu_temperature: 31.56633758544922,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 866.6002538656448,
+  gyroscope_total: 209.29882942816474,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1702,
+  angle_x: 2.162266969680786,
+  angle_y: -0.298665076494217,
+  angle_z: 2.182796205808006
+}
+✅ 历史数据处理完成，最新ID: 300
+✅ 数据插入成功
+插入的记录ID: 13366
+
+⏱️  处理完成，耗时: 479ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+📨 收到新的IoT数据，开始处理...
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:36:41.375Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T123641Z",
+  "event_time_ms": "2025-07-18T12:36:41.211Z",
+  "request_id": "9b784310-ddfb-475f-97c2-7efa43e3dd17",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.60906219482422,
+            "illumination": 74.16666412353516,
+            "humidity": 34.87907409667969,
+            "acceleration_x": 9,
+            "acceleration_y": 35,
+            "acceleration_z": 868,
+            "gyroscope_x": -151,
+            "gyroscope_y": 53,
+            "gyroscope_z": -135,
+            "mpu_temperature": 31.60906219482422,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.869562268257141,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 1732,
+            "angle_x": 2.365389585494995,
+            "angle_y": -0.5957193970680237,
+            "angle_z": 2.43925183021583
+          },
+          "event_time": "20250718T123641Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.60906219482422,
+  illumination: 74.16666412353516,
+  humidity: 34.87907409667969,
+  acceleration_x: 9,
+  acceleration_y: 35,
+  acceleration_z: 868,
+  gyroscope_x: -151,
+  gyroscope_y: 53,
+  gyroscope_z: -135,
+  mpu_temperature: 31.60906219482422,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.869562268257141,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1732,
+  angle_x: 2.365389585494995,
+  angle_y: -0.5957193970680237,
+  angle_z: 2.43925183021583
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:36:41.000Z',
+  temperature: 31.60906219482422,
+  humidity: 34.87907409667969,
+  illumination: 74.16666412353516,
+  acceleration_x: 9,
+  acceleration_y: 35,
+  acceleration_z: 868,
+  gyroscope_x: -151,
+  gyroscope_y: 53,
+  gyroscope_z: -135,
+  mpu_temperature: 31.60906219482422,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 868.7519784150135,
+  gyroscope_total: 209.3680969011277,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1732,
+  angle_x: 2.365389585494995,
+  angle_y: -0.5957193970680237,
+  angle_z: 2.43925183021583
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13367
+
+⏱️  处理完成，耗时: 1514ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+🔄 处理 100 条历史数据...
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:37:11.512Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T123711Z",
+  "event_time_ms": "2025-07-18T12:37:11.360Z",
+  "request_id": "8024fe17-c9d9-4323-bcfe-cce0fdc9705c",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.536964416503906,
+            "illumination": 74.16666412353516,
+            "humidity": 34.88822937011719,
+            "acceleration_x": 5,
+            "acceleration_y": 33,
+            "acceleration_z": 864,
+            "gyroscope_x": -151,
+            "gyroscope_y": 50,
+            "gyroscope_z": -133,
+            "mpu_temperature": 31.536964416503906,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8654173612594604,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 1763,
+            "angle_x": 2.231135368347168,
+            "angle_y": -0.3396942913532257,
+            "angle_z": 2.256846747891319
+          },
+          "event_time": "20250718T123711Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.536964416503906,
+  illumination: 74.16666412353516,
+  humidity: 34.88822937011719,
+  acceleration_x: 5,
+  acceleration_y: 33,
+  acceleration_z: 864,
+  gyroscope_x: -151,
+  gyroscope_y: 50,
+  gyroscope_z: -133,
+  mpu_temperature: 31.536964416503906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8654173612594604,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1763,
+  angle_x: 2.231135368347168,
+  angle_y: -0.3396942913532257,
+  angle_z: 2.256846747891319
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:37:11.000Z',
+  temperature: 31.536964416503906,
+  humidity: 34.88822937011719,
+  illumination: 74.16666412353516,
+  acceleration_x: 5,
+  acceleration_y: 33,
+  acceleration_z: 864,
+  gyroscope_x: -151,
+  gyroscope_y: 50,
+  gyroscope_z: -133,
+  mpu_temperature: 31.536964416503906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 864.6444355918795,
+  gyroscope_total: 207.340299990137,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1763,
+  angle_x: 2.231135368347168,
+  angle_y: -0.3396942913532257,
+  angle_z: 2.256846747891319
+}
+✅ 数据插入成功
+插入的记录ID: 13368
+
+⏱️  处理完成，耗时: 411ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+📨 收到新的IoT数据，开始处理...
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:37:41.472Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T123741Z",
+  "event_time_ms": "2025-07-18T12:37:41.348Z",
+  "request_id": "20a03997-f035-47cf-b1bd-4bfec3450e8e",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.579689025878906,
+            "illumination": 74.16666412353516,
+            "humidity": 34.87754821777344,
+            "acceleration_x": 9,
+            "acceleration_y": 32,
+            "acceleration_z": 867,
+            "gyroscope_x": -154,
+            "gyroscope_y": 44,
+            "gyroscope_z": -128,
+            "mpu_temperature": 31.579689025878906,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.868105173110962,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 1793,
+            "angle_x": 2.1677849292755127,
+            "angle_y": -0.6288899183273315,
+            "angle_z": 2.257165042474253
+          },
+          "event_time": "20250718T123741Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.579689025878906,
+  illumination: 74.16666412353516,
+  humidity: 34.87754821777344,
+  acceleration_x: 9,
+  acceleration_y: 32,
+  acceleration_z: 867,
+  gyroscope_x: -154,
+  gyroscope_y: 44,
+  gyroscope_z: -128,
+  mpu_temperature: 31.579689025878906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.868105173110962,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1793,
+  angle_x: 2.1677849292755127,
+  angle_y: -0.6288899183273315,
+  angle_z: 2.257165042474253
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:37:41.000Z',
+  temperature: 31.579689025878906,
+  humidity: 34.87754821777344,
+  illumination: 74.16666412353516,
+  acceleration_x: 9,
+  acceleration_y: 32,
+  acceleration_z: 867,
+  gyroscope_x: -154,
+  gyroscope_y: 44,
+  gyroscope_z: -128,
+  mpu_temperature: 31.579689025878906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 867.6370208791232,
+  gyroscope_total: 205.02682751288916,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1793,
+  angle_x: 2.1677849292755127,
+  angle_y: -0.6288899183273315,
+  angle_z: 2.257165042474253
+}
+✅ 数据插入成功
+插入的记录ID: 13369
+
+⏱️  处理完成，耗时: 472ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+📨 收到新的IoT数据，开始处理...
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:38:11.652Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T123811Z",
+  "event_time_ms": "2025-07-18T12:38:11.487Z",
+  "request_id": "0fe86710-3420-473f-a6cc-3937d1d79888",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.550315856933594,
+            "illumination": 74.16666412353516,
+            "humidity": 34.91569519042969,
+            "acceleration_x": 7,
+            "acceleration_y": 32,
+            "acceleration_z": 866,
+            "gyroscope_x": -152,
+            "gyroscope_y": 48,
+            "gyroscope_z": -131,
+            "mpu_temperature": 31.550315856933594,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8672335743904114,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 1822,
+            "angle_x": 2.1780354976654053,
+            "angle_y": -0.4761759638786316,
+            "angle_z": 2.229480248323885
+          },
+          "event_time": "20250718T123811Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.550315856933594,
+  illumination: 74.16666412353516,
+  humidity: 34.91569519042969,
+  acceleration_x: 7,
+  acceleration_y: 32,
+  acceleration_z: 866,
+  gyroscope_x: -152,
+  gyroscope_y: 48,
+  gyroscope_z: -131,
+  mpu_temperature: 31.550315856933594,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8672335743904114,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1822,
+  angle_x: 2.1780354976654053,
+  angle_y: -0.4761759638786316,
+  angle_z: 2.229480248323885
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:38:11.000Z',
+  temperature: 31.550315856933594,
+  humidity: 34.91569519042969,
+  illumination: 74.16666412353516,
+  acceleration_x: 7,
+  acceleration_y: 32,
+  acceleration_z: 866,
+  gyroscope_x: -152,
+  gyroscope_y: 48,
+  gyroscope_z: -131,
+  mpu_temperature: 31.550315856933594,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 866.6192935770586,
+  gyroscope_total: 206.3225629929989,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1822,
+  angle_x: 2.1780354976654053,
+  angle_y: -0.4761759638786316,
+  angle_z: 2.229480248323885
+}
+✅ 数据插入成功
+插入的记录ID: 13370
+
+⏱️  处理完成，耗时: 395ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+📨 收到新的IoT数据，开始处理...
+✅ 历史数据处理完成，最新ID: 400
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:38:42.110Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T123841Z",
+  "event_time_ms": "2025-07-18T12:38:41.708Z",
+  "request_id": "f3b98a61-c5f0-41cb-8ffd-eeb2cdc4f782",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.494239807128906,
+            "illumination": 74.16666412353516,
+            "humidity": 34.88365173339844,
+            "acceleration_x": 8,
+            "acceleration_y": 36,
+            "acceleration_z": 866,
+            "gyroscope_x": -148,
+            "gyroscope_y": 44,
+            "gyroscope_z": -131,
+            "mpu_temperature": 31.494239807128906,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.867130994796753,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 1853,
+            "angle_x": 2.3962440490722656,
+            "angle_y": -0.548963487148285,
+            "angle_z": 2.4583218774066693
+          },
+          "event_time": "20250718T123841Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.494239807128906,
+  illumination: 74.16666412353516,
+  humidity: 34.88365173339844,
+  acceleration_x: 8,
+  acceleration_y: 36,
+  acceleration_z: 866,
+  gyroscope_x: -148,
+  gyroscope_y: 44,
+  gyroscope_z: -131,
+  mpu_temperature: 31.494239807128906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.867130994796753,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1853,
+  angle_x: 2.3962440490722656,
+  angle_y: -0.548963487148285,
+  angle_z: 2.4583218774066693
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:38:41.000Z',
+  temperature: 31.494239807128906,
+  humidity: 34.88365173339844,
+  illumination: 74.16666412353516,
+  acceleration_x: 8,
+  acceleration_y: 36,
+  acceleration_z: 866,
+  gyroscope_x: -148,
+  gyroscope_y: 44,
+  gyroscope_z: -131,
+  mpu_temperature: 31.494239807128906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 866.7848637349408,
+  gyroscope_total: 202.48703662210082,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1853,
+  angle_x: 2.3962440490722656,
+  angle_y: -0.548963487148285,
+  angle_z: 2.4583218774066693
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13371
+
+⏱️  处理完成，耗时: 2001ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+🔍 检查设备离线状态...
+⚠️  发现 6 个离线设备
+📵 设备离线: 兰草监测设备1 (77035712) (179801分钟)
+📵 设备离线: 上坪监测设备2 (vice_006) (179163分钟)
+📵 设备离线: 下湾监测设备1 (vice_007) (179158分钟)
+📵 设备离线: 前岗监测设备1 (vice_008) (179153分钟)
+📵 设备离线: 上坪监测设备3 (t_device) (69002分钟)
+📵 设备离线: 龙门滑坡监测站 (10分钟)
+🔄 处理 100 条历史数据...
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:39:12.084Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T123911Z",
+  "event_time_ms": "2025-07-18T12:39:11.960Z",
+  "request_id": "1d1519ca-75f7-44f1-b67b-a601da02c947",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.494239807128906,
+            "illumination": 74.16666412353516,
+            "humidity": 34.85618209838867,
+            "acceleration_x": 8,
+            "acceleration_y": 34,
+            "acceleration_z": 867,
+            "gyroscope_x": -150,
+            "gyroscope_y": 45,
+            "gyroscope_z": -124,
+            "mpu_temperature": 31.494239807128906,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8686371445655823,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 1883,
+            "angle_x": 2.2550930976867676,
+            "angle_y": -0.580190598964691,
+            "angle_z": 2.3285330168072575
+          },
+          "event_time": "20250718T123911Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.494239807128906,
+  illumination: 74.16666412353516,
+  humidity: 34.85618209838867,
+  acceleration_x: 8,
+  acceleration_y: 34,
+  acceleration_z: 867,
+  gyroscope_x: -150,
+  gyroscope_y: 45,
+  gyroscope_z: -124,
+  mpu_temperature: 31.494239807128906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8686371445655823,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1883,
+  angle_x: 2.2550930976867676,
+  angle_y: -0.580190598964691,
+  angle_z: 2.3285330168072575
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:39:11.000Z',
+  temperature: 31.494239807128906,
+  humidity: 34.85618209838867,
+  illumination: 74.16666412353516,
+  acceleration_x: 8,
+  acceleration_y: 34,
+  acceleration_z: 867,
+  gyroscope_x: -150,
+  gyroscope_y: 45,
+  gyroscope_z: -124,
+  mpu_temperature: 31.494239807128906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 867.7032903014716,
+  gyroscope_total: 199.75234666956982,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1883,
+  angle_x: 2.2550930976867676,
+  angle_y: -0.580190598964691,
+  angle_z: 2.3285330168072575
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13372
+
+⏱️  处理完成，耗时: 630ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:39:42.180Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T123942Z",
+  "event_time_ms": "2025-07-18T12:39:42.007Z",
+  "request_id": "f58aa40b-de14-4eab-85bf-45feb6f0b659",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.507591247558594,
+            "illumination": 74.16666412353516,
+            "humidity": 34.71732711791992,
+            "acceleration_x": 10,
+            "acceleration_y": 34,
+            "acceleration_z": 866,
+            "gyroscope_x": -154,
+            "gyroscope_y": 46,
+            "gyroscope_z": -125,
+            "mpu_temperature": 31.507591247558594,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8668362498283386,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 1913,
+            "angle_x": 2.275930404663086,
+            "angle_y": -0.6944603323936462,
+            "angle_z": 2.3795239776346384
+          },
+          "event_time": "20250718T123942Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.507591247558594,
+  illumination: 74.16666412353516,
+  humidity: 34.71732711791992,
+  acceleration_x: 10,
+  acceleration_y: 34,
+  acceleration_z: 866,
+  gyroscope_x: -154,
+  gyroscope_y: 46,
+  gyroscope_z: -125,
+  mpu_temperature: 31.507591247558594,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8668362498283386,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1913,
+  angle_x: 2.275930404663086,
+  angle_y: -0.6944603323936462,
+  angle_z: 2.3795239776346384
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:39:42.000Z',
+  temperature: 31.507591247558594,
+  humidity: 34.71732711791992,
+  illumination: 74.16666412353516,
+  acceleration_x: 10,
+  acceleration_y: 34,
+  acceleration_z: 866,
+  gyroscope_x: -154,
+  gyroscope_y: 46,
+  gyroscope_z: -125,
+  mpu_temperature: 31.507591247558594,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 866.7248698404817,
+  gyroscope_total: 203.60992117281515,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1913,
+  angle_x: 2.275930404663086,
+  angle_y: -0.6944603323936462,
+  angle_z: 2.3795239776346384
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13373
+
+⏱️  处理完成，耗时: 640ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:40:12.413Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T124012Z",
+  "event_time_ms": "2025-07-18T12:40:12.257Z",
+  "request_id": "779c1384-bec2-47c2-b8c2-cbf6df8fc1b9",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.52094268798828,
+            "illumination": 74.16666412353516,
+            "humidity": 35.05607604980469,
+            "acceleration_x": 9,
+            "acceleration_y": 35,
+            "acceleration_z": 868,
+            "gyroscope_x": -156,
+            "gyroscope_y": 52,
+            "gyroscope_z": -130,
+            "mpu_temperature": 31.52094268798828,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8689175844192505,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 1943,
+            "angle_x": 2.3107542991638184,
+            "angle_y": -0.5961381793022156,
+            "angle_z": 2.38641282261176
+          },
+          "event_time": "20250718T124012Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.52094268798828,
+  illumination: 74.16666412353516,
+  humidity: 35.05607604980469,
+  acceleration_x: 9,
+  acceleration_y: 35,
+  acceleration_z: 868,
+  gyroscope_x: -156,
+  gyroscope_y: 52,
+  gyroscope_z: -130,
+  mpu_temperature: 31.52094268798828,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8689175844192505,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1943,
+  angle_x: 2.3107542991638184,
+  angle_y: -0.5961381793022156,
+  angle_z: 2.38641282261176
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:40:12.000Z',
+  temperature: 31.52094268798828,
+  humidity: 35.05607604980469,
+  illumination: 74.16666412353516,
+  acceleration_x: 9,
+  acceleration_y: 35,
+  acceleration_z: 868,
+  gyroscope_x: -156,
+  gyroscope_y: 52,
+  gyroscope_z: -130,
+  mpu_temperature: 31.52094268798828,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 868.7519784150135,
+  gyroscope_total: 209.61870145576228,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1943,
+  angle_x: 2.3107542991638184,
+  angle_y: -0.5961381793022156,
+  angle_z: 2.38641282261176
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13374
+
+⏱️  处理完成，耗时: 609ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:40:42.480Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T124042Z",
+  "event_time_ms": "2025-07-18T12:40:42.325Z",
+  "request_id": "b40c1235-a2ea-42e1-957b-8f24fc5a8604",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.56633758544922,
+            "illumination": 75.8333282470703,
+            "humidity": 35.04692077636719,
+            "acceleration_x": 8,
+            "acceleration_y": 34,
+            "acceleration_z": 865,
+            "gyroscope_x": -150,
+            "gyroscope_y": 48,
+            "gyroscope_z": -131,
+            "mpu_temperature": 31.56633758544922,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8665684461593628,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 1973,
+            "angle_x": 2.268556594848633,
+            "angle_y": -0.5815810561180115,
+            "angle_z": 2.341919202036348
+          },
+          "event_time": "20250718T124042Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.56633758544922,
+  illumination: 75.8333282470703,
+  humidity: 35.04692077636719,
+  acceleration_x: 8,
+  acceleration_y: 34,
+  acceleration_z: 865,
+  gyroscope_x: -150,
+  gyroscope_y: 48,
+  gyroscope_z: -131,
+  mpu_temperature: 31.56633758544922,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8665684461593628,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1973,
+  angle_x: 2.268556594848633,
+  angle_y: -0.5815810561180115,
+  angle_z: 2.341919202036348
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:40:42.000Z',
+  temperature: 31.56633758544922,
+  humidity: 35.04692077636719,
+  illumination: 75.8333282470703,
+  acceleration_x: 8,
+  acceleration_y: 34,
+  acceleration_z: 865,
+  gyroscope_x: -150,
+  gyroscope_y: 48,
+  gyroscope_z: -131,
+  mpu_temperature: 31.56633758544922,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 865.7049150836559,
+  gyroscope_total: 204.8536062655476,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 1973,
+  angle_x: 2.268556594848633,
+  angle_y: -0.5815810561180115,
+  angle_z: 2.341919202036348
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13375
+
+⏱️  处理完成，耗时: 627ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:41:12.643Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T124112Z",
+  "event_time_ms": "2025-07-18T12:41:12.467Z",
+  "request_id": "235ca414-a570-47ae-87c9-93d4653f3e71",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.507591247558594,
+            "illumination": 74.16666412353516,
+            "humidity": 34.91111755371094,
+            "acceleration_x": 10,
+            "acceleration_y": 31,
+            "acceleration_z": 866,
+            "gyroscope_x": -152,
+            "gyroscope_y": 47,
+            "gyroscope_z": -127,
+            "mpu_temperature": 31.507591247558594,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8668424487113953,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2003,
+            "angle_x": 2.0740561485290527,
+            "angle_y": -0.6943624019622803,
+            "angle_z": 2.187200962991283
+          },
+          "event_time": "20250718T124112Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.507591247558594,
+  illumination: 74.16666412353516,
+  humidity: 34.91111755371094,
+  acceleration_x: 10,
+  acceleration_y: 31,
+  acceleration_z: 866,
+  gyroscope_x: -152,
+  gyroscope_y: 47,
+  gyroscope_z: -127,
+  mpu_temperature: 31.507591247558594,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8668424487113953,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2003,
+  angle_x: 2.0740561485290527,
+  angle_y: -0.6943624019622803,
+  angle_z: 2.187200962991283
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:41:12.000Z',
+  temperature: 31.507591247558594,
+  humidity: 34.91111755371094,
+  illumination: 74.16666412353516,
+  acceleration_x: 10,
+  acceleration_y: 31,
+  acceleration_z: 866,
+  gyroscope_x: -152,
+  gyroscope_y: 47,
+  gyroscope_z: -127,
+  mpu_temperature: 31.507591247558594,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 866.6123700940346,
+  gyroscope_total: 203.57308270004657,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2003,
+  angle_x: 2.0740561485290527,
+  angle_y: -0.6943624019622803,
+  angle_z: 2.187200962991283
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13376
+
+⏱️  处理完成，耗时: 610ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+✅ 历史数据处理完成，最新ID: 500
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:41:42.827Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T124142Z",
+  "event_time_ms": "2025-07-18T12:41:42.702Z",
+  "request_id": "871a8081-6a8f-4894-816c-eaba1f481fd4",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.56633758544922,
+            "illumination": 74.16666412353516,
+            "humidity": 34.70817184448242,
+            "acceleration_x": 8,
+            "acceleration_y": 36,
+            "acceleration_z": 865,
+            "gyroscope_x": -160,
+            "gyroscope_y": 48,
+            "gyroscope_z": -128,
+            "mpu_temperature": 31.56633758544922,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8666749596595764,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2034,
+            "angle_x": 2.437891721725464,
+            "angle_y": -0.58965802192688,
+            "angle_z": 2.5081891136196783
+          },
+          "event_time": "20250718T124142Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.56633758544922,
+  illumination: 74.16666412353516,
+  humidity: 34.70817184448242,
+  acceleration_x: 8,
+  acceleration_y: 36,
+  acceleration_z: 865,
+  gyroscope_x: -160,
+  gyroscope_y: 48,
+  gyroscope_z: -128,
+  mpu_temperature: 31.56633758544922,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8666749596595764,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2034,
+  angle_x: 2.437891721725464,
+  angle_y: -0.58965802192688,
+  angle_z: 2.5081891136196783
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:41:42.000Z',
+  temperature: 31.56633758544922,
+  humidity: 34.70817184448242,
+  illumination: 74.16666412353516,
+  acceleration_x: 8,
+  acceleration_y: 36,
+  acceleration_z: 865,
+  gyroscope_x: -160,
+  gyroscope_y: 48,
+  gyroscope_z: -128,
+  mpu_temperature: 31.56633758544922,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 865.785770268835,
+  gyroscope_total: 210.44714300745449,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2034,
+  angle_x: 2.437891721725464,
+  angle_y: -0.58965802192688,
+  angle_z: 2.5081891136196783
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13377
+
+⏱️  处理完成，耗时: 1499ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+🔄 处理 100 条历史数据...
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:42:12.954Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T124212Z",
+  "event_time_ms": "2025-07-18T12:42:12.797Z",
+  "request_id": "663e354b-063b-49f8-92eb-64e723f73eec",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.464866638183594,
+            "illumination": 74.16666412353516,
+            "humidity": 34.96452331542969,
+            "acceleration_x": 9,
+            "acceleration_y": 32,
+            "acceleration_z": 864,
+            "gyroscope_x": -156,
+            "gyroscope_y": 54,
+            "gyroscope_z": -133,
+            "mpu_temperature": 31.464866638183594,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8652937412261963,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2063,
+            "angle_x": 2.166743040084839,
+            "angle_y": -0.622843623161316,
+            "angle_z": 2.2544865447965763
+          },
+          "event_time": "20250718T124212Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.464866638183594,
+  illumination: 74.16666412353516,
+  humidity: 34.96452331542969,
+  acceleration_x: 9,
+  acceleration_y: 32,
+  acceleration_z: 864,
+  gyroscope_x: -156,
+  gyroscope_y: 54,
+  gyroscope_z: -133,
+  mpu_temperature: 31.464866638183594,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8652937412261963,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2063,
+  angle_x: 2.166743040084839,
+  angle_y: -0.622843623161316,
+  angle_z: 2.2544865447965763
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:42:12.000Z',
+  temperature: 31.464866638183594,
+  humidity: 34.96452331542969,
+  illumination: 74.16666412353516,
+  acceleration_x: 9,
+  acceleration_y: 32,
+  acceleration_z: 864,
+  gyroscope_x: -156,
+  gyroscope_y: 54,
+  gyroscope_z: -133,
+  mpu_temperature: 31.464866638183594,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 864.6392311247507,
+  gyroscope_total: 211.9929244102265,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2063,
+  angle_x: 2.166743040084839,
+  angle_y: -0.622843623161316,
+  angle_z: 2.2544865447965763
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13378
+
+⏱️  处理完成，耗时: 610ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:42:43.391Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T124243Z",
+  "event_time_ms": "2025-07-18T12:42:43.270Z",
+  "request_id": "c72b0540-8ef1-4402-bd74-bfef27b174f1",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.52094268798828,
+            "illumination": 75.8333282470703,
+            "humidity": 34.98435974121094,
+            "acceleration_x": 9,
+            "acceleration_y": 31,
+            "acceleration_z": 866,
+            "gyroscope_x": -148,
+            "gyroscope_y": 55,
+            "gyroscope_z": -126,
+            "mpu_temperature": 31.52094268798828,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8669657111167908,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2094,
+            "angle_x": 2.1060519218444824,
+            "angle_y": -0.597398042678833,
+            "angle_z": 2.1891411829531093
+          },
+          "event_time": "20250718T124243Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.52094268798828,
+  illumination: 75.8333282470703,
+  humidity: 34.98435974121094,
+  acceleration_x: 9,
+  acceleration_y: 31,
+  acceleration_z: 866,
+  gyroscope_x: -148,
+  gyroscope_y: 55,
+  gyroscope_z: -126,
+  mpu_temperature: 31.52094268798828,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8669657111167908,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2094,
+  angle_x: 2.1060519218444824,
+  angle_y: -0.597398042678833,
+  angle_z: 2.1891411829531093
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:42:43.000Z',
+  temperature: 31.52094268798828,
+  humidity: 34.98435974121094,
+  illumination: 75.8333282470703,
+  acceleration_x: 9,
+  acceleration_y: 31,
+  acceleration_z: 866,
+  gyroscope_x: -148,
+  gyroscope_y: 55,
+  gyroscope_z: -126,
+  mpu_temperature: 31.52094268798828,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 866.6014077994565,
+  gyroscope_total: 202.00247523235947,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2094,
+  angle_x: 2.1060519218444824,
+  angle_y: -0.597398042678833,
+  angle_z: 2.1891411829531093
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13379
+
+⏱️  处理完成，耗时: 598ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:43:13.460Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T124313Z",
+  "event_time_ms": "2025-07-18T12:43:13.333Z",
+  "request_id": "86e24ae5-8422-41d3-bd3a-5a4616673595",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.536964416503906,
+            "illumination": 76.66666412353516,
+            "humidity": 35.04234313964844,
+            "acceleration_x": 8,
+            "acceleration_y": 33,
+            "acceleration_z": 856,
+            "gyroscope_x": -173,
+            "gyroscope_y": 43,
+            "gyroscope_z": -130,
+            "mpu_temperature": 31.536964416503906,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.857157588005066,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2124,
+            "angle_x": 2.2608120441436768,
+            "angle_y": -0.5879634022712708,
+            "angle_z": 2.33601628019916
+          },
+          "event_time": "20250718T124313Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.536964416503906,
+  illumination: 76.66666412353516,
+  humidity: 35.04234313964844,
+  acceleration_x: 8,
+  acceleration_y: 33,
+  acceleration_z: 856,
+  gyroscope_x: -173,
+  gyroscope_y: 43,
+  gyroscope_z: -130,
+  mpu_temperature: 31.536964416503906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.857157588005066,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2124,
+  angle_x: 2.2608120441436768,
+  angle_y: -0.5879634022712708,
+  angle_z: 2.33601628019916
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:43:13.000Z',
+  temperature: 31.536964416503906,
+  humidity: 35.04234313964844,
+  illumination: 76.66666412353516,
+  acceleration_x: 8,
+  acceleration_y: 33,
+  acceleration_z: 856,
+  gyroscope_x: -173,
+  gyroscope_y: 43,
+  gyroscope_z: -130,
+  mpu_temperature: 31.536964416503906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 856.6732165767761,
+  gyroscope_total: 220.63091351848226,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2124,
+  angle_x: 2.2608120441436768,
+  angle_y: -0.5879634022712708,
+  angle_z: 2.33601628019916
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13380
+
+⏱️  处理完成，耗时: 1662ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:43:43.692Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T124343Z",
+  "event_time_ms": "2025-07-18T12:43:43.552Z",
+  "request_id": "b12ad4dd-3a92-440e-b552-d123afffb494",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.52094268798828,
+            "illumination": 80,
+            "humidity": 34.68986129760742,
+            "acceleration_x": 11,
+            "acceleration_y": 35,
+            "acceleration_z": 865,
+            "gyroscope_x": -154,
+            "gyroscope_y": 45,
+            "gyroscope_z": -130,
+            "mpu_temperature": 31.52094268798828,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8660342693328857,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2154,
+            "angle_x": 2.3426995277404785,
+            "angle_y": -0.759803533554077,
+            "angle_z": 2.4628322084292957
+          },
+          "event_time": "20250718T124343Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.52094268798828,
+  illumination: 80,
+  humidity: 34.68986129760742,
+  acceleration_x: 11,
+  acceleration_y: 35,
+  acceleration_z: 865,
+  gyroscope_x: -154,
+  gyroscope_y: 45,
+  gyroscope_z: -130,
+  mpu_temperature: 31.52094268798828,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8660342693328857,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2154,
+  angle_x: 2.3426995277404785,
+  angle_y: -0.759803533554077,
+  angle_z: 2.4628322084292957
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:43:43.000Z',
+  temperature: 31.52094268798828,
+  humidity: 34.68986129760742,
+  illumination: 80,
+  acceleration_x: 11,
+  acceleration_y: 35,
+  acceleration_z: 865,
+  gyroscope_x: -154,
+  gyroscope_y: 45,
+  gyroscope_z: -130,
+  mpu_temperature: 31.52094268798828,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 865.7776850901159,
+  gyroscope_total: 206.49697334343668,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2154,
+  angle_x: 2.3426995277404785,
+  angle_y: -0.759803533554077,
+  angle_z: 2.4628322084292957
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13381
+
+⏱️  处理完成，耗时: 617ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+🔍 检查设备离线状态...
+⚠️  发现 6 个离线设备
+📵 设备离线: 兰草监测设备2 (77035712) (179806分钟)
+📵 设备离线: 上坪监测设备4 (vice_006) (179168分钟)
+📵 设备离线: 下湾监测设备2 (vice_007) (179163分钟)
+📵 设备离线: 前岗监测设备2 (vice_008) (179158分钟)
+📵 设备离线: 上坪监测设备5 (t_device) (69007分钟)
+📵 设备离线: 龙门滑坡监测站 (15分钟)
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:44:13.895Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T124413Z",
+  "event_time_ms": "2025-07-18T12:44:13.778Z",
+  "request_id": "51a15875-ffc3-4220-a1ea-8e3d9597f52a",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.52094268798828,
+            "illumination": 80,
+            "humidity": 34.70359420776367,
+            "acceleration_x": 9,
+            "acceleration_y": 32,
+            "acceleration_z": 863,
+            "gyroscope_x": -162,
+            "gyroscope_y": 48,
+            "gyroscope_z": -129,
+            "mpu_temperature": 31.52094268798828,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8640621900558472,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2184,
+            "angle_x": 2.153632640838623,
+            "angle_y": -0.6075246930122375,
+            "angle_z": 2.237681792459588
+          },
+          "event_time": "20250718T124413Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.52094268798828,
+  illumination: 80,
+  humidity: 34.70359420776367,
+  acceleration_x: 9,
+  acceleration_y: 32,
+  acceleration_z: 863,
+  gyroscope_x: -162,
+  gyroscope_y: 48,
+  gyroscope_z: -129,
+  mpu_temperature: 31.52094268798828,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8640621900558472,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2184,
+  angle_x: 2.153632640838623,
+  angle_y: -0.6075246930122375,
+  angle_z: 2.237681792459588
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:44:13.000Z',
+  temperature: 31.52094268798828,
+  humidity: 34.70359420776367,
+  illumination: 80,
+  acceleration_x: 9,
+  acceleration_y: 32,
+  acceleration_z: 863,
+  gyroscope_x: -162,
+  gyroscope_y: 48,
+  gyroscope_z: -129,
+  mpu_temperature: 31.52094268798828,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 863.639971284331,
+  gyroscope_total: 212.5770448566825,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2184,
+  angle_x: 2.153632640838623,
+  angle_y: -0.6075246930122375,
+  angle_z: 2.237681792459588
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13382
+
+⏱️  处理完成，耗时: 2300ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+✅ 历史数据处理完成，最新ID: 600
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:44:44.227Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T124444Z",
+  "event_time_ms": "2025-07-18T12:44:44.067Z",
+  "request_id": "8f26e092-5c0f-4cbd-a77d-f4ab2dcd254d",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.536964416503906,
+            "illumination": 77.5,
+            "humidity": 34.83176803588867,
+            "acceleration_x": 9,
+            "acceleration_y": 32,
+            "acceleration_z": 871,
+            "gyroscope_x": -148,
+            "gyroscope_y": 51,
+            "gyroscope_z": -128,
+            "mpu_temperature": 31.536964416503906,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8724735379219055,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2214,
+            "angle_x": 2.116816282272339,
+            "angle_y": -0.6257201433181763,
+            "angle_z": 2.207359705767822
+          },
+          "event_time": "20250718T124444Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.536964416503906,
+  illumination: 77.5,
+  humidity: 34.83176803588867,
+  acceleration_x: 9,
+  acceleration_y: 32,
+  acceleration_z: 871,
+  gyroscope_x: -148,
+  gyroscope_y: 51,
+  gyroscope_z: -128,
+  mpu_temperature: 31.536964416503906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8724735379219055,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2214,
+  angle_x: 2.116816282272339,
+  angle_y: -0.6257201433181763,
+  angle_z: 2.207359705767822
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:44:44.000Z',
+  temperature: 31.536964416503906,
+  humidity: 34.83176803588867,
+  illumination: 77.5,
+  acceleration_x: 9,
+  acceleration_y: 32,
+  acceleration_z: 871,
+  gyroscope_x: -148,
+  gyroscope_y: 51,
+  gyroscope_z: -128,
+  mpu_temperature: 31.536964416503906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 871.6340975432295,
+  gyroscope_total: 202.21028658305195,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2214,
+  angle_x: 2.116816282272339,
+  angle_y: -0.6257201433181763,
+  angle_z: 2.207359705767822
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13383
+
+⏱️  处理完成，耗时: 1514ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+🔄 处理 100 条历史数据...
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:45:14.268Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T124514Z",
+  "event_time_ms": "2025-07-18T12:45:14.105Z",
+  "request_id": "4d83df92-be4f-4f43-be69-6a793e186c05",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.536964416503906,
+            "illumination": 75.8333282470703,
+            "humidity": 34.77378463745117,
+            "acceleration_x": 7,
+            "acceleration_y": 33,
+            "acceleration_z": 866,
+            "gyroscope_x": -154,
+            "gyroscope_y": 46,
+            "gyroscope_z": -128,
+            "mpu_temperature": 31.536964416503906,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8675183057785034,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2244,
+            "angle_x": 2.241866111755371,
+            "angle_y": -0.500246226787567,
+            "angle_z": 2.297000206889922
+          },
+          "event_time": "20250718T124514Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.536964416503906,
+  illumination: 75.8333282470703,
+  humidity: 34.77378463745117,
+  acceleration_x: 7,
+  acceleration_y: 33,
+  acceleration_z: 866,
+  gyroscope_x: -154,
+  gyroscope_y: 46,
+  gyroscope_z: -128,
+  mpu_temperature: 31.536964416503906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8675183057785034,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2244,
+  angle_x: 2.241866111755371,
+  angle_y: -0.500246226787567,
+  angle_z: 2.297000206889922
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:45:14.000Z',
+  temperature: 31.536964416503906,
+  humidity: 34.77378463745117,
+  illumination: 75.8333282470703,
+  acceleration_x: 7,
+  acceleration_y: 33,
+  acceleration_z: 866,
+  gyroscope_x: -154,
+  gyroscope_y: 46,
+  gyroscope_z: -128,
+  mpu_temperature: 31.536964416503906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 866.6567948155717,
+  gyroscope_total: 205.46532554180524,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2244,
+  angle_x: 2.241866111755371,
+  angle_y: -0.500246226787567,
+  angle_z: 2.297000206889922
+}
+✅ 数据插入成功
+插入的记录ID: 13384
+
+⏱️  处理完成，耗时: 420ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+📨 收到新的IoT数据，开始处理...
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:45:44.485Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T124544Z",
+  "event_time_ms": "2025-07-18T12:45:44.305Z",
+  "request_id": "0017d566-9780-4fe1-8abf-b840f3d530ff",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.579689025878906,
+            "illumination": 74.16666412353516,
+            "humidity": 34.87754821777344,
+            "acceleration_x": 7,
+            "acceleration_y": 35,
+            "acceleration_z": 867,
+            "gyroscope_x": -154,
+            "gyroscope_y": 49,
+            "gyroscope_z": -132,
+            "mpu_temperature": 31.579689025878906,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.86817467212677,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2274,
+            "angle_x": 2.32079529762268,
+            "angle_y": -0.48376938700675964,
+            "angle_z": 2.3706799938567085
+          },
+          "event_time": "20250718T124544Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.579689025878906,
+  illumination: 74.16666412353516,
+  humidity: 34.87754821777344,
+  acceleration_x: 7,
+  acceleration_y: 35,
+  acceleration_z: 867,
+  gyroscope_x: -154,
+  gyroscope_y: 49,
+  gyroscope_z: -132,
+  mpu_temperature: 31.579689025878906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.86817467212677,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2274,
+  angle_x: 2.32079529762268,
+  angle_y: -0.48376938700675964,
+  angle_z: 2.3706799938567085
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:45:44.000Z',
+  temperature: 31.579689025878906,
+  humidity: 34.87754821777344,
+  illumination: 74.16666412353516,
+  acceleration_x: 7,
+  acceleration_y: 35,
+  acceleration_z: 867,
+  gyroscope_x: -154,
+  gyroscope_y: 49,
+  gyroscope_z: -132,
+  mpu_temperature: 31.579689025878906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 867.7344063709817,
+  gyroscope_total: 208.6648029735729,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2274,
+  angle_x: 2.32079529762268,
+  angle_y: -0.48376938700675964,
+  angle_z: 2.3706799938567085
+}
+✅ 数据插入成功
+插入的记录ID: 13385
+
+⏱️  处理完成，耗时: 402ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+📨 收到新的IoT数据，开始处理...
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:46:14.554Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T124614Z",
+  "event_time_ms": "2025-07-18T12:46:14.415Z",
+  "request_id": "bab5b88e-4ecf-45f4-814f-f7929bc2a7c4",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.56633758544922,
+            "illumination": 74.16666412353516,
+            "humidity": 34.72190475463867,
+            "acceleration_x": 8,
+            "acceleration_y": 34,
+            "acceleration_z": 863,
+            "gyroscope_x": -150,
+            "gyroscope_y": 54,
+            "gyroscope_z": -122,
+            "mpu_temperature": 31.56633758544922,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.863879144191742,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2305,
+            "angle_x": 2.2756221294403076,
+            "angle_y": -0.5428797006607056,
+            "angle_z": 2.339481661690875
+          },
+          "event_time": "20250718T124614Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.56633758544922,
+  illumination: 74.16666412353516,
+  humidity: 34.72190475463867,
+  acceleration_x: 8,
+  acceleration_y: 34,
+  acceleration_z: 863,
+  gyroscope_x: -150,
+  gyroscope_y: 54,
+  gyroscope_z: -122,
+  mpu_temperature: 31.56633758544922,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.863879144191742,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2305,
+  angle_x: 2.2756221294403076,
+  angle_y: -0.5428797006607056,
+  angle_z: 2.339481661690875
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:46:14.000Z',
+  temperature: 31.56633758544922,
+  humidity: 34.72190475463867,
+  illumination: 74.16666412353516,
+  acceleration_x: 8,
+  acceleration_y: 34,
+  acceleration_z: 863,
+  gyroscope_x: -150,
+  gyroscope_y: 54,
+  gyroscope_z: -122,
+  mpu_temperature: 31.56633758544922,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 863.7065473874793,
+  gyroscope_total: 200.7485989988473,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2305,
+  angle_x: 2.2756221294403076,
+  angle_y: -0.5428797006607056,
+  angle_z: 2.339481661690875
+}
+✅ 数据插入成功
+插入的记录ID: 13386
+
+⏱️  处理完成，耗时: 434ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+📨 收到新的IoT数据，开始处理...
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:46:44.725Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T124644Z",
+  "event_time_ms": "2025-07-18T12:46:44.562Z",
+  "request_id": "898c45de-a5fa-45af-bd39-b241e2a990c7",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.579689025878906,
+            "illumination": 80,
+            "humidity": 35.45433807373047,
+            "acceleration_x": 6,
+            "acceleration_y": 31,
+            "acceleration_z": 867,
+            "gyroscope_x": -154,
+            "gyroscope_y": 45,
+            "gyroscope_z": -122,
+            "mpu_temperature": 31.579689025878906,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8682774901390076,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2334,
+            "angle_x": 2.0948081016540527,
+            "angle_y": -0.4030306339263916,
+            "angle_z": 2.133226353352725
+          },
+          "event_time": "20250718T124644Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.579689025878906,
+  illumination: 80,
+  humidity: 35.45433807373047,
+  acceleration_x: 6,
+  acceleration_y: 31,
+  acceleration_z: 867,
+  gyroscope_x: -154,
+  gyroscope_y: 45,
+  gyroscope_z: -122,
+  mpu_temperature: 31.579689025878906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8682774901390076,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2334,
+  angle_x: 2.0948081016540527,
+  angle_y: -0.4030306339263916,
+  angle_z: 2.133226353352725
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:46:44.000Z',
+  temperature: 31.579689025878906,
+  humidity: 35.45433807373047,
+  illumination: 80,
+  acceleration_x: 6,
+  acceleration_y: 31,
+  acceleration_z: 867,
+  gyroscope_x: -154,
+  gyroscope_y: 45,
+  gyroscope_z: -122,
+  mpu_temperature: 31.579689025878906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 867.5747806385338,
+  gyroscope_total: 201.55644370746373,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2334,
+  angle_x: 2.0948081016540527,
+  angle_y: -0.4030306339263916,
+  angle_z: 2.133226353352725
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13387
+
+⏱️  处理完成，耗时: 617ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+✅ 历史数据处理完成，最新ID: 700
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:47:14.822Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T124714Z",
+  "event_time_ms": "2025-07-18T12:47:14.663Z",
+  "request_id": "f087c6fe-5c1b-4ad3-968b-fb9f545c5b4f",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.579689025878906,
+            "illumination": 75,
+            "humidity": 35.710689544677734,
+            "acceleration_x": 10,
+            "acceleration_y": 34,
+            "acceleration_z": 869,
+            "gyroscope_x": -154,
+            "gyroscope_y": 45,
+            "gyroscope_z": -128,
+            "mpu_temperature": 31.579689025878906,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.870120942592621,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2364,
+            "angle_x": 2.2432010173797607,
+            "angle_y": -0.724002480506897,
+            "angle_z": 2.3571445429064664
+          },
+          "event_time": "20250718T124714Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.579689025878906,
+  illumination: 75,
+  humidity: 35.710689544677734,
+  acceleration_x: 10,
+  acceleration_y: 34,
+  acceleration_z: 869,
+  gyroscope_x: -154,
+  gyroscope_y: 45,
+  gyroscope_z: -128,
+  mpu_temperature: 31.579689025878906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.870120942592621,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2364,
+  angle_x: 2.2432010173797607,
+  angle_y: -0.724002480506897,
+  angle_z: 2.3571445429064664
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:47:14.000Z',
+  temperature: 31.579689025878906,
+  humidity: 35.710689544677734,
+  illumination: 75,
+  acceleration_x: 10,
+  acceleration_y: 34,
+  acceleration_z: 869,
+  gyroscope_x: -154,
+  gyroscope_y: 45,
+  gyroscope_z: -128,
+  mpu_temperature: 31.579689025878906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 869.7223694950015,
+  gyroscope_total: 205.24375751773792,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2364,
+  angle_x: 2.2432010173797607,
+  angle_y: -0.724002480506897,
+  angle_z: 2.3571445429064664
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13388
+
+⏱️  处理完成，耗时: 1888ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:47:46.063Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T124744Z",
+  "event_time_ms": "2025-07-18T12:47:44.907Z",
+  "request_id": "2d18c8a2-043f-45ea-b8a1-cb62be4fb9d5",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.60906219482422,
+            "illumination": 74.16666412353516,
+            "humidity": 34.5265884399414,
+            "acceleration_x": 12,
+            "acceleration_y": 32,
+            "acceleration_z": 864,
+            "gyroscope_x": -147,
+            "gyroscope_y": 56,
+            "gyroscope_z": -128,
+            "mpu_temperature": 31.60906219482422,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.865565299987793,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2395,
+            "angle_x": 2.149890899658203,
+            "angle_y": -0.8167229294776917,
+            "angle_z": 2.2997972136620612
+          },
+          "event_time": "20250718T124744Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.60906219482422,
+  illumination: 74.16666412353516,
+  humidity: 34.5265884399414,
+  acceleration_x: 12,
+  acceleration_y: 32,
+  acceleration_z: 864,
+  gyroscope_x: -147,
+  gyroscope_y: 56,
+  gyroscope_z: -128,
+  mpu_temperature: 31.60906219482422,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.865565299987793,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2395,
+  angle_x: 2.149890899658203,
+  angle_y: -0.8167229294776917,
+  angle_z: 2.2997972136620612
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:47:44.000Z',
+  temperature: 31.60906219482422,
+  humidity: 34.5265884399414,
+  illumination: 74.16666412353516,
+  acceleration_x: 12,
+  acceleration_y: 32,
+  acceleration_z: 864,
+  gyroscope_x: -147,
+  gyroscope_y: 56,
+  gyroscope_z: -128,
+  mpu_temperature: 31.60906219482422,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 864.6756617368156,
+  gyroscope_total: 202.80285994038644,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2395,
+  angle_x: 2.149890899658203,
+  angle_y: -0.8167229294776917,
+  angle_z: 2.2997972136620612
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13389
+
+⏱️  处理完成，耗时: 877ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+🔄 处理 100 条历史数据...
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:48:15.158Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T124815Z",
+  "event_time_ms": "2025-07-18T12:48:15.022Z",
+  "request_id": "1c4c651d-c8cf-4492-88d5-c3ce0642d206",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.550315856933594,
+            "illumination": 73.3333282470703,
+            "humidity": 34.604408264160156,
+            "acceleration_x": 11,
+            "acceleration_y": 33,
+            "acceleration_z": 868,
+            "gyroscope_x": -157,
+            "gyroscope_y": 44,
+            "gyroscope_z": -131,
+            "mpu_temperature": 31.550315856933594,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.869142174720764,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2425,
+            "angle_x": 2.221569061279297,
+            "angle_y": -0.781184434890747,
+            "angle_z": 2.354913632248315
+          },
+          "event_time": "20250718T124815Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.550315856933594,
+  illumination: 73.3333282470703,
+  humidity: 34.604408264160156,
+  acceleration_x: 11,
+  acceleration_y: 33,
+  acceleration_z: 868,
+  gyroscope_x: -157,
+  gyroscope_y: 44,
+  gyroscope_z: -131,
+  mpu_temperature: 31.550315856933594,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.869142174720764,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2425,
+  angle_x: 2.221569061279297,
+  angle_y: -0.781184434890747,
+  angle_z: 2.354913632248315
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:48:15.000Z',
+  temperature: 31.550315856933594,
+  humidity: 34.604408264160156,
+  illumination: 73.3333282470703,
+  acceleration_x: 11,
+  acceleration_y: 33,
+  acceleration_z: 868,
+  gyroscope_x: -157,
+  gyroscope_y: 44,
+  gyroscope_z: -131,
+  mpu_temperature: 31.550315856933594,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 868.696724985193,
+  gyroscope_total: 209.15544458607812,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2425,
+  angle_x: 2.221569061279297,
+  angle_y: -0.781184434890747,
+  angle_z: 2.354913632248315
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13390
+
+⏱️  处理完成，耗时: 418ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:48:45.169Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T124845Z",
+  "event_time_ms": "2025-07-18T12:48:45.013Z",
+  "request_id": "b5c2e6c7-0caa-4b6c-925e-9ed15db024b3",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.579689025878906,
+            "illumination": 73.3333282470703,
+            "humidity": 34.5113296508789,
+            "acceleration_x": 5,
+            "acceleration_y": 33,
+            "acceleration_z": 866,
+            "gyroscope_x": -157,
+            "gyroscope_y": 51,
+            "gyroscope_z": -127,
+            "mpu_temperature": 31.579689025878906,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.867359459400177,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2455,
+            "angle_x": 2.20192813873291,
+            "angle_y": -0.3873458206653595,
+            "angle_z": 2.2357379794892553
+          },
+          "event_time": "20250718T124845Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.579689025878906,
+  illumination: 73.3333282470703,
+  humidity: 34.5113296508789,
+  acceleration_x: 5,
+  acceleration_y: 33,
+  acceleration_z: 866,
+  gyroscope_x: -157,
+  gyroscope_y: 51,
+  gyroscope_z: -127,
+  mpu_temperature: 31.579689025878906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.867359459400177,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2455,
+  angle_x: 2.20192813873291,
+  angle_y: -0.3873458206653595,
+  angle_z: 2.2357379794892553
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:48:45.000Z',
+  temperature: 31.579689025878906,
+  humidity: 34.5113296508789,
+  illumination: 73.3333282470703,
+  acceleration_x: 5,
+  acceleration_y: 33,
+  acceleration_z: 866,
+  gyroscope_x: -157,
+  gyroscope_y: 51,
+  gyroscope_z: -127,
+  mpu_temperature: 31.579689025878906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 866.6429483933969,
+  gyroscope_total: 208.27625884867436,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2455,
+  angle_x: 2.20192813873291,
+  angle_y: -0.3873458206653595,
+  angle_z: 2.2357379794892553
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13391
+
+⏱️  处理完成，耗时: 441ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+🔍 检查设备离线状态...
+⚠️  发现 6 个离线设备
+📵 设备离线: 兰草监测设备3 (77035712) (179811分钟)
+📵 设备离线: 上坪监测设备6 (vice_006) (179173分钟)
+📵 设备离线: 下湾监测设备3 (vice_007) (179168分钟)
+📵 设备离线: 前岗监测设备3 (vice_008) (179163分钟)
+📵 设备离线: 上坪监测设备7 (t_device) (69012分钟)
+📵 设备离线: 龙门滑坡监测站 (20分钟)
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:49:15.205Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T124915Z",
+  "event_time_ms": "2025-07-18T12:49:15.072Z",
+  "request_id": "21ec616b-642e-44a4-a144-5f05336a355b",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.59571075439453,
+            "illumination": 74.16666412353516,
+            "humidity": 34.540321350097656,
+            "acceleration_x": 8,
+            "acceleration_y": 30,
+            "acceleration_z": 868,
+            "gyroscope_x": -156,
+            "gyroscope_y": 41,
+            "gyroscope_z": -128,
+            "mpu_temperature": 31.59571075439453,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8687496781349182,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2485,
+            "angle_x": 2.0292210578918457,
+            "angle_y": -0.5558611750602722,
+            "angle_z": 2.1039771262376137
+          },
+          "event_time": "20250718T124915Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.59571075439453,
+  illumination: 74.16666412353516,
+  humidity: 34.540321350097656,
+  acceleration_x: 8,
+  acceleration_y: 30,
+  acceleration_z: 868,
+  gyroscope_x: -156,
+  gyroscope_y: 41,
+  gyroscope_z: -128,
+  mpu_temperature: 31.59571075439453,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8687496781349182,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2485,
+  angle_x: 2.0292210578918457,
+  angle_y: -0.5558611750602722,
+  angle_z: 2.1039771262376137
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:49:15.000Z',
+  temperature: 31.59571075439453,
+  humidity: 34.540321350097656,
+  illumination: 74.16666412353516,
+  acceleration_x: 8,
+  acceleration_y: 30,
+  acceleration_z: 868,
+  gyroscope_x: -156,
+  gyroscope_y: 41,
+  gyroscope_z: -128,
+  mpu_temperature: 31.59571075439453,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 868.5551220273818,
+  gyroscope_total: 205.91503102007877,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2485,
+  angle_x: 2.0292210578918457,
+  angle_y: -0.5558611750602722,
+  angle_z: 2.1039771262376137
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13392
+
+⏱️  处理完成，耗时: 650ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:49:45.737Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T124945Z",
+  "event_time_ms": "2025-07-18T12:49:45.568Z",
+  "request_id": "9959a847-3fb7-41b1-a7da-87eb38e4f30c",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.550315856933594,
+            "illumination": 73.3333282470703,
+            "humidity": 34.5662612915039,
+            "acceleration_x": 10,
+            "acceleration_y": 34,
+            "acceleration_z": 865,
+            "gyroscope_x": -151,
+            "gyroscope_y": 50,
+            "gyroscope_z": -137,
+            "mpu_temperature": 31.550315856933594,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8667080402374268,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2515,
+            "angle_x": 2.268190860748291,
+            "angle_y": -0.6864826679229736,
+            "angle_z": 2.3697991970082017
+          },
+          "event_time": "20250718T124945Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.550315856933594,
+  illumination: 73.3333282470703,
+  humidity: 34.5662612915039,
+  acceleration_x: 10,
+  acceleration_y: 34,
+  acceleration_z: 865,
+  gyroscope_x: -151,
+  gyroscope_y: 50,
+  gyroscope_z: -137,
+  mpu_temperature: 31.550315856933594,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8667080402374268,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2515,
+  angle_x: 2.268190860748291,
+  angle_y: -0.6864826679229736,
+  angle_z: 2.3697991970082017
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:49:45.000Z',
+  temperature: 31.550315856933594,
+  humidity: 34.5662612915039,
+  illumination: 73.3333282470703,
+  acceleration_x: 10,
+  acceleration_y: 34,
+  acceleration_z: 865,
+  gyroscope_x: -151,
+  gyroscope_y: 50,
+  gyroscope_z: -137,
+  mpu_temperature: 31.550315856933594,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 865.7257071382367,
+  gyroscope_total: 209.92855927672156,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2515,
+  angle_x: 2.268190860748291,
+  angle_y: -0.6864826679229736,
+  angle_z: 2.3697991970082017
+}
+✅ 数据插入成功
+插入的记录ID: 13393
+
+⏱️  处理完成，耗时: 425ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+📨 收到新的IoT数据，开始处理...
+✅ 历史数据处理完成，最新ID: 800
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:50:15.827Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T125015Z",
+  "event_time_ms": "2025-07-18T12:50:15.715Z",
+  "request_id": "f967065e-fcb1-4008-b823-83ae33feb9a7",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.56633758544922,
+            "illumination": 74.16666412353516,
+            "humidity": 34.576942443847656,
+            "acceleration_x": 13,
+            "acceleration_y": 34,
+            "acceleration_z": 866,
+            "gyroscope_x": -154,
+            "gyroscope_y": 48,
+            "gyroscope_z": -126,
+            "mpu_temperature": 31.56633758544922,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8671215176582336,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2545,
+            "angle_x": 2.267108917236328,
+            "angle_y": -0.9121990203857422,
+            "angle_z": 2.4437450553208664
+          },
+          "event_time": "20250718T125015Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.56633758544922,
+  illumination: 74.16666412353516,
+  humidity: 34.576942443847656,
+  acceleration_x: 13,
+  acceleration_y: 34,
+  acceleration_z: 866,
+  gyroscope_x: -154,
+  gyroscope_y: 48,
+  gyroscope_z: -126,
+  mpu_temperature: 31.56633758544922,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8671215176582336,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2545,
+  angle_x: 2.267108917236328,
+  angle_y: -0.9121990203857422,
+  angle_z: 2.4437450553208664
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:50:15.000Z',
+  temperature: 31.56633758544922,
+  humidity: 34.576942443847656,
+  illumination: 74.16666412353516,
+  acceleration_x: 13,
+  acceleration_y: 34,
+  acceleration_z: 866,
+  gyroscope_x: -154,
+  gyroscope_y: 48,
+  gyroscope_z: -126,
+  mpu_temperature: 31.56633758544922,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 866.7646739455871,
+  gyroscope_total: 204.68512403201166,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2545,
+  angle_x: 2.267108917236328,
+  angle_y: -0.9121990203857422,
+  angle_z: 2.4437450553208664
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13394
+
+⏱️  处理完成，耗时: 996ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:50:45.955Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T125045Z",
+  "event_time_ms": "2025-07-18T12:50:45.827Z",
+  "request_id": "9f37916e-b7c2-4032-861f-7e87f4859046",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.56633758544922,
+            "illumination": 74.16666412353516,
+            "humidity": 34.5082778930664,
+            "acceleration_x": 6,
+            "acceleration_y": 32,
+            "acceleration_z": 869,
+            "gyroscope_x": -156,
+            "gyroscope_y": 49,
+            "gyroscope_z": -128,
+            "mpu_temperature": 31.56633758544922,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.869665563106537,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2575,
+            "angle_x": 2.163893699645996,
+            "angle_y": -0.4506950080394745,
+            "angle_z": 2.21033072946999
+          },
+          "event_time": "20250718T125045Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.56633758544922,
+  illumination: 74.16666412353516,
+  humidity: 34.5082778930664,
+  acceleration_x: 6,
+  acceleration_y: 32,
+  acceleration_z: 869,
+  gyroscope_x: -156,
+  gyroscope_y: 49,
+  gyroscope_z: -128,
+  mpu_temperature: 31.56633758544922,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.869665563106537,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2575,
+  angle_x: 2.163893699645996,
+  angle_y: -0.4506950080394745,
+  angle_z: 2.21033072946999
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:50:45.000Z',
+  temperature: 31.56633758544922,
+  humidity: 34.5082778930664,
+  illumination: 74.16666412353516,
+  acceleration_x: 6,
+  acceleration_y: 32,
+  acceleration_z: 869,
+  gyroscope_x: -156,
+  gyroscope_y: 49,
+  gyroscope_z: -128,
+  mpu_temperature: 31.56633758544922,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 869.6096825587903,
+  gyroscope_total: 207.65596548137017,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2575,
+  angle_x: 2.163893699645996,
+  angle_y: -0.4506950080394745,
+  angle_z: 2.21033072946999
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13395
+
+⏱️  处理完成，耗时: 1448ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+🔄 处理 100 条历史数据...
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:51:16.057Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T125115Z",
+  "event_time_ms": "2025-07-18T12:51:15.932Z",
+  "request_id": "b83bcf20-e8ab-4ce8-9d11-a4737449df7d",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.579689025878906,
+            "illumination": 74.16666412353516,
+            "humidity": 34.607460021972656,
+            "acceleration_x": 7,
+            "acceleration_y": 30,
+            "acceleration_z": 865,
+            "gyroscope_x": -153,
+            "gyroscope_y": 57,
+            "gyroscope_z": -129,
+            "mpu_temperature": 31.579689025878906,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8659285306930542,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2605,
+            "angle_x": 2.0196709632873535,
+            "angle_y": -0.509174644947052,
+            "angle_z": 2.0828657227490743
+          },
+          "event_time": "20250718T125115Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.579689025878906,
+  illumination: 74.16666412353516,
+  humidity: 34.607460021972656,
+  acceleration_x: 7,
+  acceleration_y: 30,
+  acceleration_z: 865,
+  gyroscope_x: -153,
+  gyroscope_y: 57,
+  gyroscope_z: -129,
+  mpu_temperature: 31.579689025878906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8659285306930542,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2605,
+  angle_x: 2.0196709632873535,
+  angle_y: -0.509174644947052,
+  angle_z: 2.0828657227490743
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:51:15.000Z',
+  temperature: 31.579689025878906,
+  humidity: 34.607460021972656,
+  illumination: 74.16666412353516,
+  acceleration_x: 7,
+  acceleration_y: 30,
+  acceleration_z: 865,
+  gyroscope_x: -153,
+  gyroscope_y: 57,
+  gyroscope_z: -129,
+  mpu_temperature: 31.579689025878906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 865.548381085656,
+  gyroscope_total: 208.08411760631805,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2605,
+  angle_x: 2.0196709632873535,
+  angle_y: -0.509174644947052,
+  angle_z: 2.0828657227490743
+}
+✅ 数据插入成功
+插入的记录ID: 13396
+
+⏱️  处理完成，耗时: 439ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+📨 收到新的IoT数据，开始处理...
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:51:46.617Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T125146Z",
+  "event_time_ms": "2025-07-18T12:51:46.487Z",
+  "request_id": "120a3ccc-740c-45e3-b548-121f3a5ba9dd",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.56633758544922,
+            "illumination": 74.16666412353516,
+            "humidity": 34.424354553222656,
+            "acceleration_x": 5,
+            "acceleration_y": 33,
+            "acceleration_z": 866,
+            "gyroscope_x": -155,
+            "gyroscope_y": 53,
+            "gyroscope_z": -126,
+            "mpu_temperature": 31.56633758544922,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8671070337295532,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2636,
+            "angle_x": 2.1864256858825684,
+            "angle_y": -0.3955267369747162,
+            "angle_z": 2.22191329253617
+          },
+          "event_time": "20250718T125146Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.56633758544922,
+  illumination: 74.16666412353516,
+  humidity: 34.424354553222656,
+  acceleration_x: 5,
+  acceleration_y: 33,
+  acceleration_z: 866,
+  gyroscope_x: -155,
+  gyroscope_y: 53,
+  gyroscope_z: -126,
+  mpu_temperature: 31.56633758544922,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8671070337295532,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2636,
+  angle_x: 2.1864256858825684,
+  angle_y: -0.3955267369747162,
+  angle_z: 2.22191329253617
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:51:46.000Z',
+  temperature: 31.56633758544922,
+  humidity: 34.424354553222656,
+  illumination: 74.16666412353516,
+  acceleration_x: 5,
+  acceleration_y: 33,
+  acceleration_z: 866,
+  gyroscope_x: -155,
+  gyroscope_y: 53,
+  gyroscope_z: -126,
+  mpu_temperature: 31.56633758544922,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 866.6429483933969,
+  gyroscope_total: 206.66397847714052,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2636,
+  angle_x: 2.1864256858825684,
+  angle_y: -0.3955267369747162,
+  angle_z: 2.22191329253617
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13397
+
+⏱️  处理完成，耗时: 454ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:52:16.607Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T125216Z",
+  "event_time_ms": "2025-07-18T12:52:16.459Z",
+  "request_id": "615deae0-42b1-4599-95aa-e872bbe3e20f",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.60906219482422,
+            "illumination": 74.16666412353516,
+            "humidity": 34.5265884399414,
+            "acceleration_x": 10,
+            "acceleration_y": 32,
+            "acceleration_z": 870,
+            "gyroscope_x": -149,
+            "gyroscope_y": 55,
+            "gyroscope_z": -131,
+            "mpu_temperature": 31.60906219482422,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8708001375198364,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2665,
+            "angle_x": 2.1691107749938965,
+            "angle_y": -0.667134463787079,
+            "angle_z": 2.2693853676639177
+          },
+          "event_time": "20250718T125216Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.60906219482422,
+  illumination: 74.16666412353516,
+  humidity: 34.5265884399414,
+  acceleration_x: 10,
+  acceleration_y: 32,
+  acceleration_z: 870,
+  gyroscope_x: -149,
+  gyroscope_y: 55,
+  gyroscope_z: -131,
+  mpu_temperature: 31.60906219482422,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8708001375198364,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2665,
+  angle_x: 2.1691107749938965,
+  angle_y: -0.667134463787079,
+  angle_z: 2.2693853676639177
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:52:16.000Z',
+  temperature: 31.60906219482422,
+  humidity: 34.5265884399414,
+  illumination: 74.16666412353516,
+  acceleration_x: 10,
+  acceleration_y: 32,
+  acceleration_z: 870,
+  gyroscope_x: -149,
+  gyroscope_y: 55,
+  gyroscope_z: -131,
+  mpu_temperature: 31.60906219482422,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 870.6457373696836,
+  gyroscope_total: 205.88103360921812,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2665,
+  angle_x: 2.1691107749938965,
+  angle_y: -0.667134463787079,
+  angle_z: 2.2693853676639177
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13398
+
+⏱️  处理完成，耗时: 627ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:52:46.683Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T125246Z",
+  "event_time_ms": "2025-07-18T12:52:46.557Z",
+  "request_id": "11934755-592d-4559-8e10-90ca1455d229",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.579689025878906,
+            "illumination": 73.3333282470703,
+            "humidity": 34.32516860961914,
+            "acceleration_x": 8,
+            "acceleration_y": 34,
+            "acceleration_z": 862,
+            "gyroscope_x": -146,
+            "gyroscope_y": 41,
+            "gyroscope_z": -129,
+            "mpu_temperature": 31.579689025878906,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8636375665664673,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2696,
+            "angle_x": 2.276259422302246,
+            "angle_y": -0.5592422485351562,
+            "angle_z": 2.343951546036396
+          },
+          "event_time": "20250718T125246Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.579689025878906,
+  illumination: 73.3333282470703,
+  humidity: 34.32516860961914,
+  acceleration_x: 8,
+  acceleration_y: 34,
+  acceleration_z: 862,
+  gyroscope_x: -146,
+  gyroscope_y: 41,
+  gyroscope_z: -129,
+  mpu_temperature: 31.579689025878906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8636375665664673,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2696,
+  angle_x: 2.276259422302246,
+  angle_y: -0.5592422485351562,
+  angle_z: 2.343951546036396
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:52:46.000Z',
+  temperature: 31.579689025878906,
+  humidity: 34.32516860961914,
+  illumination: 73.3333282470703,
+  acceleration_x: 8,
+  acceleration_y: 34,
+  acceleration_z: 862,
+  gyroscope_x: -146,
+  gyroscope_y: 41,
+  gyroscope_z: -129,
+  mpu_temperature: 31.579689025878906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 862.7073663763397,
+  gyroscope_total: 199.09294311953903,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2696,
+  angle_x: 2.276259422302246,
+  angle_y: -0.5592422485351562,
+  angle_z: 2.343951546036396
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13399
+
+⏱️  处理完成，耗时: 653ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+✅ 历史数据处理完成，最新ID: 900
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:53:16.860Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T125316Z",
+  "event_time_ms": "2025-07-18T12:53:16.696Z",
+  "request_id": "c9bad9f6-39aa-4950-b162-dc9427244ff0",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.59571075439453,
+            "illumination": 74.16666412353516,
+            "humidity": 34.415199279785156,
+            "acceleration_x": 10,
+            "acceleration_y": 31,
+            "acceleration_z": 869,
+            "gyroscope_x": -152,
+            "gyroscope_y": 45,
+            "gyroscope_z": -128,
+            "mpu_temperature": 31.59571075439453,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8696378469467163,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2726,
+            "angle_x": 2.059338331222534,
+            "angle_y": -0.6599305868148804,
+            "angle_z": 2.1624945645842084
+          },
+          "event_time": "20250718T125316Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.59571075439453,
+  illumination: 74.16666412353516,
+  humidity: 34.415199279785156,
+  acceleration_x: 10,
+  acceleration_y: 31,
+  acceleration_z: 869,
+  gyroscope_x: -152,
+  gyroscope_y: 45,
+  gyroscope_z: -128,
+  mpu_temperature: 31.59571075439453,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8696378469467163,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2726,
+  angle_x: 2.059338331222534,
+  angle_y: -0.6599305868148804,
+  angle_z: 2.1624945645842084
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:53:16.000Z',
+  temperature: 31.59571075439453,
+  humidity: 34.415199279785156,
+  illumination: 74.16666412353516,
+  acceleration_x: 10,
+  acceleration_y: 31,
+  acceleration_z: 869,
+  gyroscope_x: -152,
+  gyroscope_y: 45,
+  gyroscope_z: -128,
+  mpu_temperature: 31.59571075439453,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 869.6102575291991,
+  gyroscope_total: 203.74739262135355,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2726,
+  angle_x: 2.059338331222534,
+  angle_y: -0.6599305868148804,
+  angle_z: 2.1624945645842084
+}
+✅ 数据插入成功
+插入的记录ID: 13400
+
+⏱️  处理完成，耗时: 737ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+📨 收到新的IoT数据，开始处理...
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:53:46.796Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T125346Z",
+  "event_time_ms": "2025-07-18T12:53:46.682Z",
+  "request_id": "78c6ef98-d643-4b20-b251-4c70a3a715f7",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.579689025878906,
+            "illumination": 74.16666412353516,
+            "humidity": 34.35568618774414,
+            "acceleration_x": 9,
+            "acceleration_y": 30,
+            "acceleration_z": 867,
+            "gyroscope_x": -153,
+            "gyroscope_y": 49,
+            "gyroscope_z": -129,
+            "mpu_temperature": 31.579689025878906,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.8681458830833435,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2756,
+            "angle_x": 2.030632972717285,
+            "angle_y": -0.5965574979782104,
+            "angle_z": 2.1164477594026887
+          },
+          "event_time": "20250718T125346Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.579689025878906,
+  illumination: 74.16666412353516,
+  humidity: 34.35568618774414,
+  acceleration_x: 9,
+  acceleration_y: 30,
+  acceleration_z: 867,
+  gyroscope_x: -153,
+  gyroscope_y: 49,
+  gyroscope_z: -129,
+  mpu_temperature: 31.579689025878906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.8681458830833435,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2756,
+  angle_x: 2.030632972717285,
+  angle_y: -0.5965574979782104,
+  angle_z: 2.1164477594026887
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:53:46.000Z',
+  temperature: 31.579689025878906,
+  humidity: 34.35568618774414,
+  illumination: 74.16666412353516,
+  acceleration_x: 9,
+  acceleration_y: 30,
+  acceleration_z: 867,
+  gyroscope_x: -153,
+  gyroscope_y: 49,
+  gyroscope_z: -129,
+  mpu_temperature: 31.579689025878906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 867.5655594823944,
+  gyroscope_total: 206.03640455026388,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2756,
+  angle_x: 2.030632972717285,
+  angle_y: -0.5965574979782104,
+  angle_z: 2.1164477594026887
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13401
+
+⏱️  处理完成，耗时: 4033ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+🔍 检查设备离线状态...
+⚠️  发现 6 个离线设备
+📵 设备离线: 兰草监测设备4 (77035712) (179816分钟)
+📵 设备离线: 上坪监测设备8 (vice_006) (179178分钟)
+📵 设备离线: 下湾监测设备4 (vice_007) (179173分钟)
+📵 设备离线: 前岗监测设备4 (vice_008) (179168分钟)
+📵 设备离线: 上坪监测设备9 (t_device) (69017分钟)
+📵 设备离线: 龙门滑坡监测站 (25分钟)
+🔄 处理 100 条历史数据...
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:54:17.053Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T125416Z",
+  "event_time_ms": "2025-07-18T12:54:16.948Z",
+  "request_id": "7c2e9ef4-02b8-4900-a684-77c0c8f3a380",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.59571075439453,
+            "illumination": 74.16666412353516,
+            "humidity": 34.497596740722656,
+            "acceleration_x": 8,
+            "acceleration_y": 36,
+            "acceleration_z": 883,
+            "gyroscope_x": -150,
+            "gyroscope_y": 52,
+            "gyroscope_z": -136,
+            "mpu_temperature": 31.59571075439453,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.884316325187683,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2786,
+            "angle_x": 2.3338189125061035,
+            "angle_y": -0.5303547382354736,
+            "angle_z": 2.3933213041169354
+          },
+          "event_time": "20250718T125416Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.59571075439453,
+  illumination: 74.16666412353516,
+  humidity: 34.497596740722656,
+  acceleration_x: 8,
+  acceleration_y: 36,
+  acceleration_z: 883,
+  gyroscope_x: -150,
+  gyroscope_y: 52,
+  gyroscope_z: -136,
+  mpu_temperature: 31.59571075439453,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.884316325187683,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2786,
+  angle_x: 2.3338189125061035,
+  angle_y: -0.5303547382354736,
+  angle_z: 2.3933213041169354
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:54:16.000Z',
+  temperature: 31.59571075439453,
+  humidity: 34.497596740722656,
+  illumination: 74.16666412353516,
+  acceleration_x: 8,
+  acceleration_y: 36,
+  acceleration_z: 883,
+  gyroscope_x: -150,
+  gyroscope_y: 52,
+  gyroscope_z: -136,
+  mpu_temperature: 31.59571075439453,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 883.7697663984665,
+  gyroscope_total: 209.04544960366871,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2786,
+  angle_x: 2.3338189125061035,
+  angle_y: -0.5303547382354736,
+  angle_z: 2.3933213041169354
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13402
+
+⏱️  处理完成，耗时: 634ms
+✅ 成功处理: 1/1 个服务
+=== 处理结束 ===
+
+=== 收到华为IoT数据 ===
+时间: 2025-07-18T12:54:47.371Z
+数据: {
+  "resource": "device.property",
+  "event": "report",
+  "event_time": "20250718T125447Z",
+  "event_time_ms": "2025-07-18T12:54:47.205Z",
+  "request_id": "c44fcb51-8caa-4764-91e8-cd716b6b35d5",
+  "notify_data": {
+    "header": {
+      "app_id": "4eec73d3b77343f38262e8d3dffe81c5",
+      "device_id": "6815a14f9314d118511807c6_rk2206",
+      "node_id": "rk2206",
+      "product_id": "6815a14f9314d118511807c6",
+      "gateway_id": "6815a14f9314d118511807c6_rk2206"
+    },
+    "body": {
+      "services": [
+        {
+          "service_id": "smartHome",
+          "properties": {
+            "temperature": 31.579689025878906,
+            "illumination": 74.16666412353516,
+            "humidity": 35.8907470703125,
+            "acceleration_x": 9,
+            "acceleration_y": 33,
+            "acceleration_z": 866,
+            "gyroscope_x": -159,
+            "gyroscope_y": 43,
+            "gyroscope_z": -131,
+            "mpu_temperature": 31.579689025878906,
+            "latitude": 22.817,
+            "longitude": 108.3669,
+            "vibration": 0.867137312889099,
+            "risk_level": 0,
+            "alarm_active": false,
+            "uptime": 2816,
+            "angle_x": 2.1863491535186768,
+            "angle_y": -0.6215274930000305,
+            "angle_z": 2.27297581281604
+          },
+          "event_time": "20250718T125447Z"
+        }
+      ]
+    }
+  }
+}
+📱 设备ID: 6815a14f9314d118511807c6_rk2206
+📦 产品ID: 6815a14f9314d118511807c6
+🔧 服务数量: 1
+
+🔄 处理服务: smartHome
+属性数据: {
+  temperature: 31.579689025878906,
+  illumination: 74.16666412353516,
+  humidity: 35.8907470703125,
+  acceleration_x: 9,
+  acceleration_y: 33,
+  acceleration_z: 866,
+  gyroscope_x: -159,
+  gyroscope_y: 43,
+  gyroscope_z: -131,
+  mpu_temperature: 31.579689025878906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0.867137312889099,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2816,
+  angle_x: 2.1863491535186768,
+  angle_y: -0.6215274930000305,
+  angle_z: 2.27297581281604
+}
+📝 准备插入数据: {
+  device_id: 'device_1',
+  event_time: '2025-07-18T12:54:47.000Z',
+  temperature: 31.579689025878906,
+  humidity: 35.8907470703125,
+  illumination: 74.16666412353516,
+  acceleration_x: 9,
+  acceleration_y: 33,
+  acceleration_z: 866,
+  gyroscope_x: -159,
+  gyroscope_y: 43,
+  gyroscope_z: -131,
+  mpu_temperature: 31.579689025878906,
+  latitude: 22.817,
+  longitude: 108.3669,
+  vibration: 0,
+  acceleration_total: 866.6752563676894,
+  gyroscope_total: 210.45427056726598,
+  risk_level: 0,
+  alarm_active: false,
+  uptime: 2816,
+  angle_x: 2.1863491535186768,
+  angle_y: -0.6215274930000305,
+  angle_z: 2.27297581281604
+}
+📨 收到新的IoT数据，开始处理...
+✅ 数据插入成功
+插入的记录ID: 13403
+
+⏱️  处理完成，耗时: 650ms
 ✅ 成功处理: 1/1 个服务
 === 处理结束 ===
 

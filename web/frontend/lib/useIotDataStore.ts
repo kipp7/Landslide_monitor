@@ -102,25 +102,11 @@ export const useIotDataStore = create<IotDataStore>((set, get) => ({
 
   // 添加模拟数据功能，用于网络问题时的备用方案
   useMockData: () => {
-    const mockData: IotData[] = Array.from({ length: 50 }, (_, i) => ({
-      id: i + 1,
-      event_time: new Date(Date.now() - i * 60000).toISOString(),
-      temperature: 20 + Math.random() * 15,
-      humidity: 40 + Math.random() * 40,
-      illumination: Math.random() * 1000,
-      acceleration_x: (Math.random() - 0.5) * 2,
-      acceleration_y: (Math.random() - 0.5) * 2,
-      acceleration_z: (Math.random() - 0.5) * 2,
-      gyroscope_x: (Math.random() - 0.5) * 100,
-      gyroscope_y: (Math.random() - 0.5) * 100,
-      gyroscope_z: (Math.random() - 0.5) * 100,
-      device_id: `device_${Math.floor(i / 10) + 1}`,
-    }));
-
+    console.warn('⚠️  模拟数据功能已禁用，请检查网络连接和数据库配置');
     set({
-      data: mockData,
+      data: [],
       loading: false,
-      error: '使用模拟数据 (网络连接问题)'
+      error: '无法连接到数据库，请检查网络连接'
     });
   }
 }));

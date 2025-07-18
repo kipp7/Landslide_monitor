@@ -3,9 +3,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Table } from 'antd';
 import useRealtimeAnomalies from '../hooks/useRealtimeAnomalies';
+import useDeviceNames from '../hooks/useDeviceNames';
 
 const RealtimeAnomalyTable = () => {
   const { data } = useRealtimeAnomalies(30);
+  const { getFriendlyName } = useDeviceNames();
   const [scrollIndex, setScrollIndex] = useState(0);
   const [visibleData, setVisibleData] = useState<any[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -85,11 +87,11 @@ const RealtimeAnomalyTable = () => {
       render: (text: string) => <span className="text-cyan-300">{new Date(text).toLocaleString()}</span>,
     },
     {
-      title: '设备ID',
+      title: '设备名称',
       dataIndex: 'device_id',
       key: 'device_id',
       align: 'center' as const,
-      render: (text: string) => <span className="text-cyan-300">{text}</span>,
+      render: (text: string) => <span className="text-cyan-300">{getFriendlyName(text)}</span>,
     },
     {
       title: '异常类型',
