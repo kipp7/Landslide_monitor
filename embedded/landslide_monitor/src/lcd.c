@@ -17,6 +17,8 @@
 #include "iot_spi.h"
 #include "lcd.h"
 #include "lcd_font.h"
+#include <stddef.h>
+#include <string.h>
 
 /* 是否启用SPI通信
  * 0 => 禁用SPI，使用gpio模拟SPI通信
@@ -814,19 +816,25 @@ void lcd_draw_triangle(uint16_t x0, uint16_t y0,uint16_t x1, uint16_t y1,uint16_
  *       @mode: 0为非叠加模式；1为叠加模式
  * 返 回 值: 无
  ***************************************************************/
-void lcd_show_chinese(uint16_t x, uint16_t y, uint8_t *s, 
+void lcd_show_chinese(uint16_t x, uint16_t y, uint8_t *s,
     uint16_t fc, uint16_t bc, uint8_t sizey, uint8_t mode)
 {
-    // uint8_t buffer[128];
-    // uint32_t buffer_len = 0;
-    // uint32_t len = strlen(s);
+    if (s == NULL || strlen(s) == 0) {
+        return;
+    }
 
-    // memset(buffer, 0, sizeof(buffer));
-    // /* utf8格式汉字转化为ascii格式 */
-    // chinese_utf8_to_ascii(s, strlen(s), buffer, &buffer_len);
+    uint32_t len = strlen(s);
+    uint32_t max_chars = 10;  // 最多显示10个字符，防止死循环
+    uint32_t char_count = 0;
 
-    for (uint32_t i = 0; i < strlen(s); i += 3, x += sizey)
+    // 安全的循环，防止死循环
+    for (uint32_t i = 0; i < len && char_count < max_chars; i += 3, x += sizey, char_count++)
     {
+        // 确保不会越界
+        if (i + 2 >= len) {
+            break;
+        }
+
         if (sizey == 12)
         {
             lcd_show_chinese_12x12(x, y, &s[i], fc, bc, sizey, mode);
@@ -848,7 +856,6 @@ void lcd_show_chinese(uint16_t x, uint16_t y, uint8_t *s,
             return;
         }
     }
-
 }
 
 

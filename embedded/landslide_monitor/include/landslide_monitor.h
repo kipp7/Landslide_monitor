@@ -163,6 +163,26 @@ int SetRiskThresholds(float tilt_threshold, float vibration_threshold,
 const char* GetLastErrorMessage(void);
 void ClearErrorMessage(void);
 
+// 马达方向枚举
+typedef enum {
+    MOTOR_DIRECTION_STOP = 0,
+    MOTOR_DIRECTION_FORWARD = 1,
+    MOTOR_DIRECTION_REVERSE = 2
+} MotorDirection;
+
+// 云端控制变量声明
+extern bool g_cloud_motor_enabled;
+extern int g_cloud_motor_speed;        // 马达转速 (0-100)
+extern MotorDirection g_cloud_motor_direction;  // 马达方向
+extern int g_cloud_motor_duration;     // 运行时长 (秒)
+extern bool g_cloud_buzzer_enabled;
+extern bool g_cloud_rgb_enabled;
+extern bool g_cloud_voice_enabled;
+extern bool g_cloud_test_mode;
+extern int g_cloud_rgb_red;
+extern int g_cloud_rgb_green;
+extern int g_cloud_rgb_blue;
+
 #ifdef __cplusplus
 }
 #endif

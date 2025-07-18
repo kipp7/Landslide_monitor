@@ -259,7 +259,7 @@ int DataStorage_ProcessCached(int (*callback)(const LandslideIotData *data))
     int processed_count = 0;
     LandslideIotData data;
 
-    printf("📦 处理Flash缓存数据，共%d条记录\n", g_storage_mgr.record_count);
+    printf(" 处理Flash缓存数据，共%d条记录\n", g_storage_mgr.record_count);
 
     int failed_count = 0;
 
@@ -269,27 +269,27 @@ int DataStorage_ProcessCached(int (*callback)(const LandslideIotData *data))
             // 调用回调函数处理数据
             if (callback(&data) == 0) {
                 processed_count++;
-                printf("✅ Flash记录 %d 已加载到内存缓存\n", i);
+                printf(" Flash记录 %d 已加载到内存缓存\n", i);
             } else {
                 failed_count++;
-                printf("⚠️  Flash记录 %d 处理失败\n", i);
+                printf("  Flash记录 %d 处理失败\n", i);
             }
         } else {
             failed_count++;
-            printf("⚠️  Flash记录 %d 读取失败\n", i);
+            printf("  Flash记录 %d 读取失败\n", i);
         }
     }
 
     // 如果所有记录都无效，清空Flash
     if (failed_count > 0 && processed_count == 0) {
-        printf("🧹 检测到%d条无效Flash记录，正在清理...\n", failed_count);
+        printf(" 检测到%d条无效Flash记录，正在清理...\n", failed_count);
         DataStorage_Clear();
-        printf("✅ Flash缓存已清理完成\n");
+        printf(" Flash缓存已清理完成\n");
     } else if (processed_count > 0 && processed_count == g_storage_mgr.record_count) {
-        printf("🗑️  Flash数据已全部加载到内存，清空Flash存储\n");
+        printf("  Flash数据已全部加载到内存，清空Flash存储\n");
         DataStorage_Clear();
     } else if (failed_count > 0) {
-        printf("⚠️  Flash处理结果: 成功%d条，失败%d条\n", processed_count, failed_count);
+        printf("  Flash处理结果: 成功%d条，失败%d条\n", processed_count, failed_count);
     }
 
     return processed_count;
@@ -301,7 +301,7 @@ int DataStorage_ProcessCached(int (*callback)(const LandslideIotData *data))
  */
 int DataStorage_UploadCached(void)
 {
-    printf("⚠️  DataStorage_UploadCached已弃用，请使用统一的内存缓存系统\n");
+    printf("  DataStorage_UploadCached已弃用，请使用统一的内存缓存系统\n");
     return 0;
 }
 

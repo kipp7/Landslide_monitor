@@ -115,73 +115,212 @@ void LCD_DisplayRealTimeData(const SensorData *data)
     if (!g_lcd_initialized || data == NULL || !data->data_valid) {
         return;
     }
-    
-    // 清屏为白色背景
-    LCD_Clear(LCD_WHITE);
 
-    // 标题栏 - 320x240全屏
-    lcd_fill(0, 0, 320, 30, LCD_BLUE);
-
-    // 显示英文标题（暂时不使用中文）
-    LCD_ShowString(50, 8, "Landslide Monitor System", LCD_WHITE, LCD_BLUE, 16);
-
-    // 状态指示器 - 基于倾斜角度
-    float angle_magnitude = sqrtf(data->angle_x * data->angle_x + data->angle_y * data->angle_y);
-    uint16_t status_color;
-    const char* status_text;
-    if (angle_magnitude < 5.0f) {
-        status_color = LCD_GREEN;
-        status_text = "SAFE";
-    } else if (angle_magnitude < 10.0f) {
-        status_color = LCD_YELLOW;
-        status_text = "CAUTION";
-    } else if (angle_magnitude < 15.0f) {
-        status_color = LCD_ORANGE;
-        status_text = "WARNING";
-    } else {
-        status_color = LCD_RED;
-        status_text = "DANGER";
+    // 使用原来的中文静态布局初始化
+    if (!g_static_layout_initialized) {
+        LCD_InitStaticLayout();
+        g_static_layout_initialized = true;
     }
 
-    // 状态显示 - 大字体突出
-    lcd_fill(20, 35, 300, 70, status_color);
-    LCD_ShowString(90, 48, status_text, LCD_WHITE, status_color, 16);
+    // 只更新数据数值，保持原来的中文布局
+    LCD_UpdateDataOnly(data);
+}
 
-    // 关键数据 - 倾斜角度
-    LCD_ShowString(20, 85, "Tilt Angle:", LCD_BLACK, LCD_WHITE, 16);
-    char angle_str[32];
-    snprintf(angle_str, sizeof(angle_str), "X:%.1f  Y:%.1f deg", data->angle_x, data->angle_y);
-    LCD_ShowString(20, 105, angle_str, LCD_RED, LCD_WHITE, 16);
+/**
+ * @brief 初始化风险评估模式的静态布局 - 专业决策支持界面
+ */
+void LCD_InitRiskStatusLayout(void)
+{
+    if (!g_lcd_initialized) {
+        return;
+    }
+
+    // 不需要清屏，主程序已经清屏了
+
+    // 标题 - 使用32x32中文字体
+    lcd_show_chinese(96, 0, (uint8_t *)"风险评估", LCD_RED, LCD_WHITE, 32, 0);
+    lcd_draw_line(0, 33, LCD_W, 33, LCD_BLACK);
+
+    // 主要风险状态显示区域（大字体，醒目）
+    lcd_show_chinese(5, 40, (uint8_t *)"当前状态", LCD_RED, LCD_WHITE, 24, 0);
+    lcd_show_string(101, 40, (const uint8_t *)": ", LCD_RED, LCD_WHITE, 24, 0);
+
+    // 风险等级（用大字体突出显示）
+    lcd_show_chinese(5, 70, (uint8_t *)"风险等级", LCD_RED, LCD_WHITE, 24, 0);
+    lcd_show_string(101, 70, (const uint8_t *)": ", LCD_RED, LCD_WHITE, 24, 0);
 
     // 分割线
-    lcd_fill(20, 130, 300, 132, LCD_GRAY);
+    lcd_draw_line(0, 105, LCD_W, 105, LCD_BLACK);
 
-    // 环境数据 - 使用英文标签
-    LCD_ShowString(20, 140, "Temp:", LCD_BLACK, LCD_WHITE, 12);
-    char temp_str[16];
-    snprintf(temp_str, sizeof(temp_str), "%.1fC", data->sht_temperature);
-    LCD_ShowString(60, 140, temp_str, LCD_BLUE, LCD_WHITE, 12);
+    // 关键指标区域（24x24字体）
+    lcd_show_chinese(5, 110, (uint8_t *)"关键指标", LCD_RED, LCD_WHITE, 24, 0);
 
-    LCD_ShowString(160, 140, "Humidity:", LCD_BLACK, LCD_WHITE, 12);
-    char humi_str[16];
-    snprintf(humi_str, sizeof(humi_str), "%.1f%%", data->humidity);
-    LCD_ShowString(220, 140, humi_str, LCD_BLUE, LCD_WHITE, 12);
+    // 最高风险因子
+    lcd_show_chinese(5, 135, (uint8_t *)"主要风险", LCD_RED, LCD_WHITE, 16, 0);
+    lcd_show_string(85, 135, (const uint8_t *)": ", LCD_RED, LCD_WHITE, 16, 0);
 
-    LCD_ShowString(20, 160, "Light:", LCD_BLACK, LCD_WHITE, 12);
-    char light_str[16];
-    snprintf(light_str, sizeof(light_str), "%.0f lux", data->light_intensity);
-    LCD_ShowString(70, 160, light_str, LCD_ORANGE, LCD_WHITE, 12);
+    // 风险值
+    lcd_show_chinese(5, 155, (uint8_t *)"风险数值", LCD_RED, LCD_WHITE, 16, 0);
+    lcd_show_string(85, 155, (const uint8_t *)": ", LCD_RED, LCD_WHITE, 16, 0);
 
-    LCD_ShowString(130, 160, "Accel:", LCD_BLACK, LCD_WHITE, 12);
-    float accel_mag = sqrtf(data->accel_x*data->accel_x + data->accel_y*data->accel_y + data->accel_z*data->accel_z);
-    char accel_str[16];
-    snprintf(accel_str, sizeof(accel_str), "%.2fg", accel_mag);
-    LCD_ShowString(180, 160, accel_str, LCD_ORANGE, LCD_WHITE, 12);
+    // 置信度
+    lcd_show_chinese(5, 175, (uint8_t *)"置信程度", LCD_RED, LCD_WHITE, 16, 0);
+    lcd_show_string(85, 175, (const uint8_t *)": ", LCD_RED, LCD_WHITE, 16, 0);
 
-    // 底部信息栏
-    lcd_fill(0, 200, 320, 240, LCD_GRAY);
-    LCD_ShowString(10, 210, "Real-Time Mode", LCD_BLACK, LCD_GRAY, 12);
-    LCD_ShowString(10, 225, "Press key to switch", LCD_BLACK, LCD_GRAY, 12);
+    // 建议行动
+    lcd_show_chinese(5, 195, (uint8_t *)"建议行动", LCD_RED, LCD_WHITE, 16, 0);
+    lcd_show_string(85, 195, (const uint8_t *)": ", LCD_RED, LCD_WHITE, 16, 0);
+
+    printf("LCD risk assessment layout initialized\n");
+}
+
+/**
+ * @brief 更新风险评估模式的动态数据 - 专业决策支持
+ * @param assessment 风险评估结果
+ */
+void LCD_UpdateRiskStatusData(const RiskAssessment *assessment)
+{
+    if (!g_lcd_initialized || assessment == NULL) {
+        return;
+    }
+
+    char data_str[64];
+    uint16_t status_color;
+
+    // 1. 当前状态（只在状态变化时更新，避免闪烁）
+    static RiskLevel last_status_level = -1;
+    if (assessment->level != last_status_level) {
+        lcd_fill(109, 40, 200, 24, LCD_WHITE);
+        switch (assessment->level) {
+            case RISK_LEVEL_SAFE:
+                lcd_show_chinese(109, 40, (uint8_t *)"正常", LCD_GREEN, LCD_WHITE, 24, 0);
+                status_color = LCD_GREEN;
+                break;
+            case RISK_LEVEL_LOW:
+                lcd_show_chinese(109, 40, (uint8_t *)"注意", LCD_YELLOW, LCD_WHITE, 24, 0);
+                status_color = LCD_YELLOW;
+                break;
+            case RISK_LEVEL_MEDIUM:
+                lcd_show_chinese(109, 40, (uint8_t *)"警告", LCD_ORANGE, LCD_WHITE, 24, 0);
+                status_color = LCD_ORANGE;
+                break;
+            case RISK_LEVEL_HIGH:
+                lcd_show_chinese(109, 40, (uint8_t *)"危险", LCD_RED, LCD_WHITE, 24, 0);
+                status_color = LCD_RED;
+                break;
+            case RISK_LEVEL_CRITICAL:
+                lcd_show_chinese(109, 40, (uint8_t *)"紧急", LCD_RED, LCD_WHITE, 24, 0);
+                status_color = LCD_RED;
+                break;
+            default:
+                lcd_show_string(109, 40, (const uint8_t *)"未知", LCD_GRAY, LCD_WHITE, 24, 0);
+                status_color = LCD_GRAY;
+                break;
+        }
+        last_status_level = assessment->level;
+        printf("Status updated for level %d\n", assessment->level);
+    } else {
+        // 保持之前的颜色
+        switch (assessment->level) {
+            case RISK_LEVEL_SAFE: status_color = LCD_GREEN; break;
+            case RISK_LEVEL_LOW: status_color = LCD_YELLOW; break;
+            case RISK_LEVEL_MEDIUM: status_color = LCD_ORANGE; break;
+            case RISK_LEVEL_HIGH:
+            case RISK_LEVEL_CRITICAL: status_color = LCD_RED; break;
+            default: status_color = LCD_GRAY; break;
+        }
+    }
+
+    // 2. 风险等级（只在等级变化时更新，避免闪烁）
+    static RiskLevel last_risk_level = -1;
+    if (assessment->level != last_risk_level) {
+        lcd_fill(109, 70, 200, 24, LCD_WHITE);
+        switch (assessment->level) {
+            case RISK_LEVEL_SAFE:
+                lcd_show_chinese(109, 70, (uint8_t *)"安全", status_color, LCD_WHITE, 24, 0);
+                break;
+            case RISK_LEVEL_LOW:
+                lcd_show_chinese(109, 70, (uint8_t *)"低风险", status_color, LCD_WHITE, 24, 0);
+                break;
+            case RISK_LEVEL_MEDIUM:
+                lcd_show_chinese(109, 70, (uint8_t *)"中风险", status_color, LCD_WHITE, 24, 0);
+                break;
+            case RISK_LEVEL_HIGH:
+                lcd_show_chinese(109, 70, (uint8_t *)"高风险", status_color, LCD_WHITE, 24, 0);
+                break;
+            case RISK_LEVEL_CRITICAL:
+                lcd_show_chinese(109, 70, (uint8_t *)"极危险", status_color, LCD_WHITE, 24, 0);
+                break;
+            default:
+                lcd_show_string(109, 70, (const uint8_t *)"未知", status_color, LCD_WHITE, 24, 0);
+                break;
+        }
+        last_risk_level = assessment->level;
+        printf("Risk level updated for level %d\n", assessment->level);
+    }
+
+    // 3. 找出最高风险因子
+    float max_risk = assessment->tilt_risk;
+    const char* max_risk_name = "倾斜";
+    uint16_t max_risk_color = LCD_RED;
+
+    if (assessment->vibration_risk > max_risk) {
+        max_risk = assessment->vibration_risk;
+        max_risk_name = "振动";
+        max_risk_color = LCD_ORANGE;
+    }
+    if (assessment->humidity_risk > max_risk) {
+        max_risk = assessment->humidity_risk;
+        max_risk_name = "湿度";
+        max_risk_color = LCD_BLUE;
+    }
+    if (assessment->light_risk > max_risk) {
+        max_risk = assessment->light_risk;
+        max_risk_name = "光照";
+        max_risk_color = LCD_GREEN;
+    }
+
+    // 4. 主要风险因子
+    lcd_fill(93, 135, 150, 16, LCD_WHITE);
+    lcd_show_chinese(93, 135, (uint8_t *)max_risk_name, max_risk_color, LCD_WHITE, 16, 0);
+
+    // 5. 风险值
+    lcd_fill(93, 155, 80, 16, LCD_WHITE);
+    snprintf(data_str, sizeof(data_str), "%.2f", max_risk);
+    lcd_show_string(93, 155, (const uint8_t *)data_str, max_risk_color, LCD_WHITE, 16, 0);
+
+    // 6. 置信度
+    lcd_fill(93, 175, 80, 16, LCD_WHITE);
+    snprintf(data_str, sizeof(data_str), "%.1f%%", assessment->confidence * 100.0f);
+    lcd_show_string(93, 175, (const uint8_t *)data_str, LCD_BLUE, LCD_WHITE, 16, 0);
+
+    // 7. 建议行动（只在等级变化时更新，避免闪烁）
+    static RiskLevel last_suggestion_level = -1;
+    if (assessment->level != last_suggestion_level) {
+        lcd_fill(93, 195, 200, 16, LCD_WHITE);
+        switch (assessment->level) {
+            case RISK_LEVEL_SAFE:
+                lcd_show_chinese(93, 195, (uint8_t *)"继续监测", LCD_GREEN, LCD_WHITE, 16, 0);
+                break;
+            case RISK_LEVEL_LOW:
+                lcd_show_chinese(93, 195, (uint8_t *)"加强观察", LCD_YELLOW, LCD_WHITE, 16, 0);
+                break;
+            case RISK_LEVEL_MEDIUM:
+                lcd_show_chinese(93, 195, (uint8_t *)"准备撤离", LCD_ORANGE, LCD_WHITE, 16, 0);
+                break;
+            case RISK_LEVEL_HIGH:
+                lcd_show_chinese(93, 195, (uint8_t *)"立即撤离", LCD_RED, LCD_WHITE, 16, 0);
+                break;
+            case RISK_LEVEL_CRITICAL:
+                lcd_show_chinese(93, 195, (uint8_t *)"紧急撤离", LCD_RED, LCD_WHITE, 16, 0);
+                break;
+            default:
+                lcd_show_chinese(93, 195, (uint8_t *)"检查设备", LCD_GRAY, LCD_WHITE, 16, 0);
+                break;
+        }
+        last_suggestion_level = assessment->level;
+        printf("Suggestion updated for level %d\n", assessment->level);
+    }
 }
 
 /**
@@ -193,76 +332,225 @@ void LCD_DisplayRiskStatus(const RiskAssessment *assessment)
     if (!g_lcd_initialized || assessment == NULL) {
         return;
     }
-    
-    // 清屏
-    LCD_Clear(LCD_BLACK);
 
-    // 标题栏
-    lcd_fill(0, 0, 240, 30, LCD_RED);
-    LCD_ShowString(70, 8, "风险评估", LCD_WHITE, LCD_RED, 16);
-    
-    uint16_t risk_color;
-    const char* risk_text;
-    switch (assessment->level) {
-        case RISK_LEVEL_SAFE:
-            risk_color = LCD_GREEN;
-            risk_text = "安全";
-            break;
-        case RISK_LEVEL_LOW:
-            risk_color = LCD_YELLOW;
-            risk_text = "低风险";
-            break;
-        case RISK_LEVEL_MEDIUM:
-            risk_color = LCD_ORANGE;
-            risk_text = "中风险";
-            break;
-        case RISK_LEVEL_HIGH:
-            risk_color = LCD_RED;
-            risk_text = "高风险";
-            break;
-        case RISK_LEVEL_CRITICAL:
-            risk_color = LCD_RED;
-            risk_text = "极危险";
-            break;
-        default:
-            risk_color = LCD_GRAY;
-            risk_text = "未知";
-            break;
+    // 使用静态布局初始化和数据更新的方式
+    LCD_InitRiskStatusLayout();
+    LCD_UpdateRiskStatusData(assessment);
+}
+
+/**
+ * @brief 初始化趋势分析模式的静态布局 - 专业趋势分析工具
+ */
+void LCD_InitTrendChartLayout(void)
+{
+    if (!g_lcd_initialized) {
+        printf("LCD not initialized, cannot init trend layout\n");
+        return;
     }
 
-    // 大的风险等级显示区域
-    lcd_fill(20, 40, 220, 100, risk_color);
-    LCD_ShowString(80, 65, risk_text, LCD_WHITE, risk_color, 24);
-    
-    // 置信度
-    LCD_ShowString(10, 95, "Confidence:", LCD_BLACK, LCD_WHITE, 12);
-    char conf_str[16];
-    snprintf(conf_str, sizeof(conf_str), "%.1f%%", assessment->confidence * 100.0f);
-    LCD_ShowString(100, 95, conf_str, LCD_BLUE, LCD_WHITE, 12);
-    
-    // 风险描述
-    LCD_ShowString(10, 115, "Description:", LCD_BLACK, LCD_WHITE, 12);
-    LCD_ShowString(10, 130, assessment->description, LCD_BLACK, LCD_WHITE, 12);
-    
-    // 各项风险因子
-    LCD_ShowString(10, 155, "Risk Factors:", LCD_BLACK, LCD_WHITE, 12);
-    
-    char factor_str[32];
-    snprintf(factor_str, sizeof(factor_str), "Tilt: %.2f", assessment->tilt_risk);
-    LCD_ShowString(10, 170, factor_str, LCD_RED, LCD_WHITE, 12);
-    
-    snprintf(factor_str, sizeof(factor_str), "Vibration: %.2f", assessment->vibration_risk);
-    LCD_ShowString(10, 185, factor_str, LCD_ORANGE, LCD_WHITE, 12);
-    
-    snprintf(factor_str, sizeof(factor_str), "Humidity: %.2f", assessment->humidity_risk);
-    LCD_ShowString(120, 170, factor_str, LCD_BLUE, LCD_WHITE, 12);
-    
-    snprintf(factor_str, sizeof(factor_str), "Light: %.2f", assessment->light_risk);
-    LCD_ShowString(120, 185, factor_str, LCD_GREEN, LCD_WHITE, 12);
-    
-    // 底部状态栏
-    lcd_fill(0, 220, 240, 222, LCD_GRAY);
-    LCD_ShowString(10, 225, "Mode: Risk Status", LCD_BLACK, LCD_WHITE, 12);
+    printf("Starting trend chart layout initialization...\n");
+
+    // 不需要清屏，主程序已经清屏了
+
+    // 标题 - 使用简化中文
+    printf("Drawing trend chart title...\n");
+    lcd_show_chinese(120, 0, (uint8_t *)"趋势", LCD_RED, LCD_WHITE, 32, 0);
+    lcd_draw_line(0, 33, LCD_W, 33, LCD_BLACK);
+    printf("Title drawn successfully\n");
+
+    // 左侧：当前趋势（简化为"当前"）
+    printf("Drawing left side labels...\n");
+    lcd_show_chinese(5, 40, (uint8_t *)"当前", LCD_RED, LCD_WHITE, 24, 0);
+    printf("Current trend label drawn\n");
+
+    // 趋势描述区域（简化标签）
+    lcd_show_chinese(5, 65, (uint8_t *)"变化", LCD_RED, LCD_WHITE, 16, 0);
+    lcd_show_string(45, 65, (const uint8_t *)": ", LCD_RED, LCD_WHITE, 16, 0);
+    printf("Recent change label drawn\n");
+
+    lcd_show_chinese(5, 85, (uint8_t *)"幅度", LCD_RED, LCD_WHITE, 16, 0);
+    lcd_show_string(45, 85, (const uint8_t *)": ", LCD_RED, LCD_WHITE, 16, 0);
+    printf("Change magnitude label drawn\n");
+
+    lcd_show_chinese(5, 105, (uint8_t *)"强度", LCD_RED, LCD_WHITE, 16, 0);
+    lcd_show_string(45, 105, (const uint8_t *)": ", LCD_RED, LCD_WHITE, 16, 0);
+    printf("Trend strength label drawn\n");
+
+    // 右侧：预测（简化标题）
+    printf("Drawing right side labels...\n");
+    lcd_show_chinese(160, 40, (uint8_t *)"预测", LCD_RED, LCD_WHITE, 24, 0);
+    printf("Prediction analysis label drawn\n");
+
+    // 等级
+    lcd_show_chinese(160, 65, (uint8_t *)"等级", LCD_RED, LCD_WHITE, 16, 0);
+    lcd_show_string(200, 65, (const uint8_t *)": ", LCD_RED, LCD_WHITE, 16, 0);
+    printf("Prediction level label drawn\n");
+
+    // 可靠性
+    lcd_show_chinese(160, 85, (uint8_t *)"可靠", LCD_RED, LCD_WHITE, 16, 0);
+    lcd_show_string(200, 85, (const uint8_t *)": ", LCD_RED, LCD_WHITE, 16, 0);
+    printf("Reliability label drawn\n");
+
+    // 稳定性
+    lcd_show_chinese(160, 105, (uint8_t *)"稳定", LCD_RED, LCD_WHITE, 16, 0);
+    lcd_show_string(200, 105, (const uint8_t *)": ", LCD_RED, LCD_WHITE, 16, 0);
+    printf("Stability label drawn\n");
+
+    // 分割线
+    printf("Drawing separator line...\n");
+    lcd_draw_line(0, 145, LCD_W, 145, LCD_BLACK);
+
+    // 底部：预警（简化标题）
+    printf("Drawing bottom section...\n");
+    lcd_show_chinese(5, 150, (uint8_t *)"预警", LCD_RED, LCD_WHITE, 24, 0);
+    printf("Warning info label drawn\n");
+
+    // 时间
+    lcd_show_chinese(5, 175, (uint8_t *)"时间", LCD_RED, LCD_WHITE, 16, 0);
+    lcd_show_string(45, 175, (const uint8_t *)": ", LCD_RED, LCD_WHITE, 16, 0);
+    printf("Time window label drawn\n");
+
+    // 建议
+    lcd_show_chinese(5, 195, (uint8_t *)"建议", LCD_RED, LCD_WHITE, 16, 0);
+    lcd_show_string(45, 195, (const uint8_t *)": ", LCD_RED, LCD_WHITE, 16, 0);
+    printf("Suggestion label drawn\n");
+
+    printf("LCD trend analysis layout initialized successfully!\n");
+}
+
+// 全局变量：存储历史数据用于趋势分析
+static float g_risk_history[4][5] = {0}; // [风险类型][时间点]
+static int g_history_index = 0;
+static bool g_history_full = false;
+
+/**
+ * @brief 更新趋势分析模式的动态数据 - 专业趋势分析
+ * @param assessment 风险评估结果
+ */
+void LCD_UpdateTrendChartData(const RiskAssessment *assessment)
+{
+    if (!g_lcd_initialized || assessment == NULL) {
+        return;
+    }
+
+    char data_str[64];
+
+    // 1. 更新历史数据
+    g_risk_history[0][g_history_index] = assessment->tilt_risk;
+    g_risk_history[1][g_history_index] = assessment->vibration_risk;
+    g_risk_history[2][g_history_index] = assessment->humidity_risk;
+    g_risk_history[3][g_history_index] = assessment->light_risk;
+
+    g_history_index = (g_history_index + 1) % 5;
+    if (g_history_index == 0) g_history_full = true;
+
+    // 2. 计算总体风险和趋势
+    float current_overall = (assessment->tilt_risk + assessment->vibration_risk +
+                           assessment->humidity_risk + assessment->light_risk) / 4.0f;
+
+    // 3. 计算变化率（如果有历史数据）
+    float change_rate = 0.0f;
+    if (g_history_full || g_history_index >= 2) {
+        int prev_index = (g_history_index - 2 + 5) % 5;
+        float prev_overall = (g_risk_history[0][prev_index] + g_risk_history[1][prev_index] +
+                            g_risk_history[2][prev_index] + g_risk_history[3][prev_index]) / 4.0f;
+        change_rate = current_overall - prev_overall;
+    }
+
+    // 4. 更新趋势描述（使用完整中文）
+    // 最近变化
+    lcd_fill(85, 65, 120, 16, LCD_WHITE);
+    if (change_rate > 0.05f) {
+        lcd_show_chinese(85, 65, (uint8_t *)"风险上升", LCD_RED, LCD_WHITE, 16, 0);
+    } else if (change_rate < -0.05f) {
+        lcd_show_chinese(85, 65, (uint8_t *)"风险下降", LCD_GREEN, LCD_WHITE, 16, 0);
+    } else {
+        lcd_show_chinese(85, 65, (uint8_t *)"基本稳定", LCD_BLUE, LCD_WHITE, 16, 0);
+    }
+
+    // 变化幅度
+    lcd_fill(85, 85, 120, 16, LCD_WHITE);
+    if (fabsf(change_rate) > 0.1f) {
+        lcd_show_chinese(85, 85, (uint8_t *)"变化明显", LCD_RED, LCD_WHITE, 16, 0);
+    } else if (fabsf(change_rate) > 0.03f) {
+        lcd_show_chinese(85, 85, (uint8_t *)"轻微变化", LCD_YELLOW, LCD_WHITE, 16, 0);
+    } else {
+        lcd_show_chinese(85, 85, (uint8_t *)"几乎无变化", LCD_GREEN, LCD_WHITE, 16, 0);
+    }
+
+    // 趋势强度
+    lcd_fill(85, 105, 120, 16, LCD_WHITE);
+    if (fabsf(change_rate) > 0.08f) {
+        lcd_show_chinese(85, 105, (uint8_t *)"强烈", LCD_RED, LCD_WHITE, 16, 0);
+    } else if (fabsf(change_rate) > 0.04f) {
+        lcd_show_chinese(85, 105, (uint8_t *)"中等", LCD_ORANGE, LCD_WHITE, 16, 0);
+    } else {
+        lcd_show_chinese(85, 105, (uint8_t *)"微弱", LCD_GREEN, LCD_WHITE, 16, 0);
+    }
+
+    // 5. 更新变化率显示
+    lcd_fill(216, 65, 100, 16, LCD_WHITE);
+    if (change_rate > 0.05f) {
+        lcd_show_string(216, 65, (const uint8_t *)"上升", LCD_RED, LCD_WHITE, 16, 0);
+    } else if (change_rate < -0.05f) {
+        lcd_show_string(216, 65, (const uint8_t *)"下降", LCD_GREEN, LCD_WHITE, 16, 0);
+    } else {
+        lcd_show_string(216, 65, (const uint8_t *)"稳定", LCD_BLUE, LCD_WHITE, 16, 0);
+    }
+
+    // 6. 预测等级（基于当前趋势）
+    lcd_fill(232, 65, 120, 16, LCD_WHITE);
+    float predicted_risk = current_overall + change_rate * 2; // 简单线性预测
+    if (predicted_risk > 0.8f) {
+        lcd_show_chinese(232, 65, (uint8_t *)"高风险", LCD_RED, LCD_WHITE, 16, 0);
+    } else if (predicted_risk > 0.5f) {
+        lcd_show_chinese(232, 65, (uint8_t *)"中风险", LCD_ORANGE, LCD_WHITE, 16, 0);
+    } else if (predicted_risk > 0.2f) {
+        lcd_show_chinese(232, 65, (uint8_t *)"低风险", LCD_YELLOW, LCD_WHITE, 16, 0);
+    } else {
+        lcd_show_chinese(232, 65, (uint8_t *)"安全", LCD_GREEN, LCD_WHITE, 16, 0);
+    }
+
+    // 7. 可靠性评估（基于历史数据量）
+    lcd_fill(232, 85, 100, 16, LCD_WHITE);
+    if (g_history_full || g_history_index >= 3) {
+        lcd_show_chinese(232, 85, (uint8_t *)"可靠", LCD_GREEN, LCD_WHITE, 16, 0);
+    } else if (g_history_index >= 2) {
+        lcd_show_chinese(232, 85, (uint8_t *)"一般", LCD_YELLOW, LCD_WHITE, 16, 0);
+    } else {
+        lcd_show_chinese(232, 85, (uint8_t *)"数据不足", LCD_RED, LCD_WHITE, 16, 0);
+    }
+
+    // 8. 稳定性评估（基于变化率的绝对值）
+    lcd_fill(232, 105, 100, 16, LCD_WHITE);
+    float stability = 1.0f - fabsf(change_rate) * 10; // 变化率越小越稳定
+    if (stability > 0.8f) {
+        lcd_show_chinese(232, 105, (uint8_t *)"稳定", LCD_GREEN, LCD_WHITE, 16, 0);
+    } else if (stability > 0.5f) {
+        lcd_show_chinese(232, 105, (uint8_t *)"一般", LCD_YELLOW, LCD_WHITE, 16, 0);
+    } else {
+        lcd_show_chinese(232, 105, (uint8_t *)"不稳定", LCD_RED, LCD_WHITE, 16, 0);
+    }
+
+    // 9. 时间窗口（预测有效期）
+    lcd_fill(85, 175, 150, 16, LCD_WHITE);
+    if (fabsf(change_rate) > 0.1f) {
+        lcd_show_chinese(85, 175, (uint8_t *)"短期预测", LCD_ORANGE, LCD_WHITE, 16, 0);
+    } else {
+        lcd_show_chinese(85, 175, (uint8_t *)"中期预测", LCD_GREEN, LCD_WHITE, 16, 0);
+    }
+
+    // 10. 建议行动（基于趋势预测）
+    lcd_fill(85, 195, 200, 16, LCD_WHITE);
+    if (predicted_risk > 0.8f && change_rate > 0.05f) {
+        lcd_show_chinese(85, 195, (uint8_t *)"加强监测", LCD_RED, LCD_WHITE, 16, 0);
+    } else if (predicted_risk > 0.5f) {
+        lcd_show_chinese(85, 195, (uint8_t *)"持续观察", LCD_ORANGE, LCD_WHITE, 16, 0);
+    } else if (change_rate < -0.05f) {
+        lcd_show_chinese(85, 195, (uint8_t *)"风险降低", LCD_GREEN, LCD_WHITE, 16, 0);
+    } else {
+        lcd_show_chinese(85, 195, (uint8_t *)"正常监测", LCD_BLUE, LCD_WHITE, 16, 0);
+    }
 }
 
 /**
@@ -274,53 +562,10 @@ void LCD_DisplayTrendChart(const RiskAssessment *assessment)
     if (!g_lcd_initialized || assessment == NULL) {
         return;
     }
-    
-    // 清屏
-    LCD_Clear(LCD_WHITE);
-    
-    // 标题
-    LCD_ShowString(80, 5, "Trend Chart", LCD_BLUE, LCD_WHITE, 16);
-    
-    // 分割线
-    lcd_fill(10, 25, 230, 27, LCD_GRAY);
-    
-    // 简化的趋势显示
-    LCD_ShowString(10, 35, "Risk Trends:", LCD_BLACK, LCD_WHITE, 16);
-    
-    // 绘制简单的条形图
-    int bar_width = 40;
-    int bar_height_base = 60;
-    int bar_y = 150;
-    
-    // 倾斜风险条
-    int tilt_height = (int)(assessment->tilt_risk * bar_height_base);
-    lcd_fill(20, bar_y - tilt_height, 20 + bar_width, bar_y, LCD_RED);
-    LCD_ShowString(25, bar_y + 5, "Tilt", LCD_BLACK, LCD_WHITE, 12);
-    
-    // 振动风险条
-    int vib_height = (int)(assessment->vibration_risk * bar_height_base);
-    lcd_fill(70, bar_y - vib_height, 70 + bar_width, bar_y, LCD_ORANGE);
-    LCD_ShowString(75, bar_y + 5, "Vib", LCD_BLACK, LCD_WHITE, 12);
-    
-    // 湿度风险条
-    int humi_height = (int)(assessment->humidity_risk * bar_height_base);
-    lcd_fill(120, bar_y - humi_height, 120 + bar_width, bar_y, LCD_BLUE);
-    LCD_ShowString(125, bar_y + 5, "Humi", LCD_BLACK, LCD_WHITE, 12);
-    
-    // 光照风险条
-    int light_height = (int)(assessment->light_risk * bar_height_base);
-    lcd_fill(170, bar_y - light_height, 170 + bar_width, bar_y, LCD_GREEN);
-    LCD_ShowString(175, bar_y + 5, "Light", LCD_BLACK, LCD_WHITE, 12);
-    
-    // 刻度线
-    lcd_fill(15, bar_y - bar_height_base, 215, bar_y - bar_height_base + 1, LCD_GRAY);
-    LCD_ShowString(5, bar_y - bar_height_base - 15, "1.0", LCD_GRAY, LCD_WHITE, 12);
-    LCD_ShowString(5, bar_y - bar_height_base/2 - 5, "0.5", LCD_GRAY, LCD_WHITE, 12);
-    LCD_ShowString(5, bar_y - 5, "0.0", LCD_GRAY, LCD_WHITE, 12);
-    
-    // 底部状态栏
-    lcd_fill(0, 220, 240, 222, LCD_GRAY);
-    LCD_ShowString(10, 225, "Mode: Trend Chart", LCD_BLACK, LCD_WHITE, 12);
+
+    // 使用静态布局初始化和数据更新的方式
+    LCD_InitTrendChartLayout();
+    LCD_UpdateTrendChartData(assessment);
 }
 
 /**
