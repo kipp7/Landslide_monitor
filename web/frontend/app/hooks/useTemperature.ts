@@ -1,7 +1,13 @@
 // hooks/useTemperature.ts
 import useSensorData from './useSensorData';
 
-export default function useTemperature() {
+interface TemperatureData {
+  data: Record<string, { time: string; value: number }[]>;
+  loading: boolean;
+  error: Error | null;
+}
+
+export default function useTemperature(): TemperatureData {
   const { data, loading, error } = useSensorData();
 
   const grouped: Record<string, { time: string; value: number }[]> = {};

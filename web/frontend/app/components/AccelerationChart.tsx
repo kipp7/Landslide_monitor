@@ -16,7 +16,8 @@ const areaColors = [
 
 export default function AccelerationChart() {
   const chartRef = useRef<ReactECharts | null>(null);
-  const { data, loading, error } = useAcceleration();
+  const accelerationData = useAcceleration();
+  const { data, loading, error } = accelerationData;
   const { getFriendlyName } = useDeviceNames();
 
   const isEmpty = !data || Object.keys(data).length === 0;
@@ -35,7 +36,7 @@ export default function AccelerationChart() {
   );
 
   const series = deviceKeys.map((key, index) => ({
-    name: getFriendlyName(key),
+    name: key === 'device_1' ? '龙门滑坡监测站' : key,
     type: 'line' as const,
     smooth: true,
     showSymbol: false,

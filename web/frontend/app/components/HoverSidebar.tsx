@@ -7,6 +7,7 @@ import {
   HomeOutlined,
   SettingOutlined,
   BarChartOutlined,
+  DesktopOutlined,
 } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 
@@ -51,6 +52,7 @@ const HoverSidebar = () => {
           onClick={({ key }) => {
             if (key === 'home') router.push('/');
             if (key === 'analysis') router.push('/analysis');
+            if (key === 'device-management') router.push('/device-management');
             if (key === 'settings') router.push('/settings');
           }}
           items={[
@@ -63,6 +65,11 @@ const HoverSidebar = () => {
               key: 'analysis',
               icon: <BarChartOutlined />,
               label: '数据分析',
+            },
+            {
+              key: 'device-management',
+              icon: <DesktopOutlined />,
+              label: '设备管理',
             },
             {
               key: 'settings',

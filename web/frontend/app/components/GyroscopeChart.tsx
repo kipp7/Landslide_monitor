@@ -36,7 +36,7 @@ export default function GyroscopeChart() {
   );
 
   const series = deviceKeys.map((key, index) => ({
-    name: getFriendlyName(key),
+    name: key === 'device_1' ? '龙门滑坡监测站' : key,
     type: 'line' as const,
     smooth: true,
     showSymbol: false,

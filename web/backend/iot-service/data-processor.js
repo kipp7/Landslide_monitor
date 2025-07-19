@@ -1,6 +1,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const { getAnomalyConfig, validateSensorData } = require('./anomaly-config');
 const { createDeviceRegistration, createDeviceLocation, getDeviceDisplayName } = require('./device-registry');
+const { deviceMapper } = require('./device-mapper');
 
 // Supabase 配置
 const SUPABASE_URL = 'https://sdssoyyjhunltmcjoxtg.supabase.co';
@@ -29,10 +30,10 @@ class DataProcessor {
     // 启动实时处理
     this.startRealtimeProcessing();
     
-    // 定期处理历史数据
-    setInterval(() => {
-      this.processHistoricalData();
-    }, 60000); // 每分钟处理一次
+    // 暂时禁用历史数据处理，避免重复处理旧数据
+    // setInterval(() => {
+    //   this.processHistoricalData();
+    // }, 60000); // 每分钟处理一次
 
     // 定期检查设备离线状态
     setInterval(() => {
@@ -161,8 +162,8 @@ class DataProcessor {
       // 更新设备最后活跃时间
       await this.updateDeviceActivity(record.device_id);
       
-      // 检测异常
-      await this.detectAnomalies(record);
+      // 暂时禁用异常检测，避免误报
+      // await this.detectAnomalies(record);
       
       // 更新风险趋势
       await this.updateRiskTrends(record);

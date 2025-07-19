@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useMemo } from 'react';
 import { Spin, Alert } from 'antd';
 import BaseCard from '../components/BaseCard';
 import MapSwitchPanel from '../components/MapSwitchPanel';
 import HoverSidebar from '../components/HoverSidebar';
 import useRealtimeData from '../hooks/useRealtimeData';
 import usePerformanceMonitor from '../hooks/usePerformanceMonitor';
+import useDeviceNames from '../hooks/useDeviceNames';
+import { supabase } from '../../lib/supabaseClient';
 
 // 懒加载组件
 import {
@@ -21,14 +23,95 @@ import {
   LazyDeviceErrorChart,
   LazyAIPredictionComponent,
   LazyRealtimeAnomalyTable,
+
 } from '../components/LazyComponents';
+import { generateDeviceName, getRiskByLocation, getDetailedLocationInfo } from '../utils/location-naming';
 
 export default function AnalysisPage() {
   const [mapType, setMapType] = useState<'2D' | '3D' | '卫星图' | '视频'>('卫星图');
   const [alert, setAlert] = useState(false);
+  const [deviceMappings, setDeviceMappings] = useState<any[]>([]);
 
   // 使用统一的实时数据源
-  const { loading, error, deviceStats } = useRealtimeData();
+  const { loading, error, deviceStats, data } = useRealtimeData();
+
+  // 获取设备映射信息
+  useEffect(() => {
+    const fetchDeviceMappings = async () => {
+      try {
+        const { data: mappings, error } = await supabase
+          .from('device_mapping')
+          .select('simple_id, device_name, location_name');
+
+        if (!error && mappings) {
+          setDeviceMappings(mappings);
+        }
+      } catch (error) {
+        console.error('获取设备映射失败:', error);
+      }
+    };
+
+    fetchDeviceMappings();
+  }, []);
+
+  // 从实时数据中提取设备位置信息 - 大屏页面只显示真实数据
+  const getDevicesForMap = useMemo(() => {
+    // 大屏页面：如果没有实时数据，返回空数组，不显示假数据
+    if (!data || data.length === 0) {
+      console.log('大屏模式：没有实时数据，不显示任何监测点');
+      return [];
+    }
+
+    // 按设备ID分组，获取每个设备的最新数据
+    const deviceMap = new Map();
+    data.forEach(record => {
+      if (record.device_id && record.latitude && record.longitude) {
+        const existing = deviceMap.get(record.device_id);
+        if (!existing || new Date(record.event_time) > new Date(existing.event_time)) {
+          deviceMap.set(record.device_id, record);
+        }
+      }
+    });
+
+    // 只使用有真实坐标数据的设备
+    const realDevices = Array.from(deviceMap.values())
+      .filter(record => record.latitude && record.longitude) // 必须有真实坐标
+      .map((record, index) => {
+        const lat = parseFloat(record.latitude);
+        const lng = parseFloat(record.longitude);
+
+        // 获取详细的位置信息
+        const locationInfo = getDetailedLocationInfo(lat, lng);
+
+        // 从设备映射中获取真实的设备名称，如果没有则使用地名生成
+        const mapping = deviceMappings.find(m => m.simple_id === record.device_id);
+        const deviceName = mapping?.device_name || mapping?.location_name || generateDeviceName(lat, lng, record.device_id);
+
+        return {
+          device_id: record.device_id,
+          name: deviceName,
+          coord: [lng, lat] as [number, number],
+          temp: parseFloat(record.temperature) || 0,
+          hum: parseFloat(record.humidity) || 0,
+          status: 'online' as const, // 有数据说明在线
+          risk: getRiskByLocation(lat, lng), // 根据地理位置计算风险值
+          location: locationInfo.description
+        };
+      });
+
+    console.log('大屏模式：真实监测点数据:', realDevices);
+    return realDevices;
+  }, [data, deviceMappings]);
+
+  // 计算真实数据的地理中心点 - 使用useMemo避免重复计算
+  const mapCenter = useMemo((): [number, number] => {
+    if (getDevicesForMap.length === 0) return [110.1805, 22.6263]; // 默认中心点
+
+    const totalLng = getDevicesForMap.reduce((sum, device) => sum + device.coord[0], 0);
+    const totalLat = getDevicesForMap.reduce((sum, device) => sum + device.coord[1], 0);
+
+    return [totalLng / getDevicesForMap.length, totalLat / getDevicesForMap.length];
+  }, [getDevicesForMap]);
 
   // 性能监控
   const { warnings, isPerformanceGood } = usePerformanceMonitor();
@@ -151,9 +234,39 @@ export default function AnalysisPage() {
                     {mapType === '3D' ? (
                       <LazyMap3DContainer />
                     ) : mapType === '视频' ? (
-                      <div className="text-white text-center">视频功能开发中...</div>
+                      <div className="w-full h-full bg-black rounded-lg flex items-center justify-center">
+                        <img
+                          src={`http://192.168.43.55/stream?t=${Date.now()}`}
+                          className="max-w-full max-h-full object-contain"
+                          alt="ESP32-CAM 实时视频流"
+                          onError={(e) => {
+                            console.error('ESP32-CAM视频流加载失败');
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                          }}
+                          onLoad={() => {
+                            console.log('ESP32-CAM视频流加载成功');
+                          }}
+                        />
+                      </div>
                     ) : (
-                      <LazyMapContainer mode={mapType as '2D' | '卫星图'} />
+                      getDevicesForMap.length > 0 ? (
+                        <LazyMapContainer
+                          mode={mapType as '2D' | '卫星图'}
+                          devices={getDevicesForMap}
+                          // 大屏模式：使用缓存的地理中心点，避免重复计算
+                          center={mapCenter}
+                          // 设置更大的缩放级别，让定位更精确
+                          zoom={16}
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-full bg-gray-50 rounded-lg">
+                          <div className="text-center text-gray-500">
+                            <div className="text-lg font-medium mb-2">暂无监测点数据</div>
+                            <div className="text-sm">等待传感器数据上传中...</div>
+                          </div>
+                        </div>
+                      )
                     )}
                   </Suspense>
                 </div>

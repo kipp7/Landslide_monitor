@@ -7,15 +7,8 @@
       "stop:iot": "pkill -f iot-server.js",
       "restart:iot": "npm run stop:iot && sleep 2 && npm run start:iot",
       "logs:iot": "cd iot-service && tail -f server.log",
-      "test:iot": "cd iot-service && npm test",
-      "start:command": "cd command-service && ./start.sh",
-      "stop:command": "pkill -f command-server.js",
-      "restart:command": "npm run stop:command && sleep 2 && npm run start:command",
-      "logs:command": "cd command-service && tail -f command.log",
-      "test:command": "cd command-service && npm test",
-      "start:all": "npm run start:iot && sleep 3 && npm run start:command",
-      "stop:all": "npm run stop:iot && npm run stop:command",
-      "status": "ps aux | grep -E '(iot-server|command-server)' | grep -v grep"
+      "status": "ps aux | grep -E '(iot-server|api-service)' | grep -v grep",
+      "test:iot": "cd iot-service && npm test"
     },
     "keywords": [
       "landslide",
@@ -31,4 +24,3 @@
       "node": ">=18.0.0"
     }
   }
-  

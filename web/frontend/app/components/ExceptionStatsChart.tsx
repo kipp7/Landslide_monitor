@@ -17,7 +17,7 @@ const ExceptionStatsTable = () => {
   const containerRef = useRef(null);
 
   const fullData = [
-    { key: '1', device: '设备一', sensorError: 2, commError: 1, powerError: 2 },
+    { key: '1', device: '龙门滑坡监测站', sensorError: 2, commError: 1, powerError: 2 },
     { key: '2', device: '设备二', sensorError: 5, commError: 3, powerError: 1 },
     { key: '3', device: '设备三', sensorError: 10, commError: 8, powerError: 5 },
     { key: '4', device: '设备四', sensorError: 1, commError: 1, powerError: 0 },

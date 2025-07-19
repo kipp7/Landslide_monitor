@@ -14,7 +14,22 @@ interface IotData {
   gyroscope_y?: number;
   gyroscope_z?: number;
   device_id?: string;
-  [key: string]: string | number | undefined;
+
+  // GPS坐标
+  latitude?: number;
+  longitude?: number;
+
+  // GPS形变分析字段
+  deformation_distance_3d?: number;
+  deformation_horizontal?: number;
+  deformation_vertical?: number;
+  deformation_velocity?: number;
+  deformation_risk_level?: number;
+  deformation_type?: number;
+  deformation_confidence?: number;
+  baseline_established?: boolean;
+
+  [key: string]: string | number | boolean | undefined;
 }
 
 interface IotDataStore {
@@ -23,7 +38,6 @@ interface IotDataStore {
   error: string | null;
   fetchData: () => Promise<void>;
   subscribeToRealtime: () => () => void;
-  useMockData: () => void;
 }
 
 export const useIotDataStore = create<IotDataStore>((set, get) => ({
@@ -100,13 +114,5 @@ export const useIotDataStore = create<IotDataStore>((set, get) => ({
     };
   },
 
-  // 添加模拟数据功能，用于网络问题时的备用方案
-  useMockData: () => {
-    console.warn('⚠️  模拟数据功能已禁用，请检查网络连接和数据库配置');
-    set({
-      data: [],
-      loading: false,
-      error: '无法连接到数据库，请检查网络连接'
-    });
-  }
+
 }));

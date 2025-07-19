@@ -77,26 +77,49 @@ function ClusterPopup({ features }: { features: any[] }) {
   );
 }
 
+// 设备信息接口
+interface DevicePoint {
+  device_id: string;
+  name: string;
+  coord: [number, number]; // [lng, lat]
+  temp: number;
+  hum: number;
+  status: 'online' | 'offline' | 'maintenance';
+  risk?: number;
+  location?: string; // 添加位置描述字段
+}
+
 // 地图主组件 MapContainer
-export default function MapContainer({ mode }: { mode: '2D' | '卫星图' }) {
+export default function MapContainer({
+  mode,
+  devices = [],
+  center,
+  zoom = 11
+}: {
+  mode: '2D' | '卫星图';
+  devices?: DevicePoint[];
+  center?: [number, number]; // [lng, lat]
+  zoom?: number;
+}) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<Map | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const clickHandlerRef = useRef<any>(null);
   const [clusterPoints, setClusterPoints] = useState<any[] | null>(null);
 
+  // 地图初始化 - 只在mode变化时重新创建地图
   useEffect(() => {
+
     if (mapInstance.current) mapInstance.current.setTarget(undefined);
     if (!mapRef.current) return;
 
     const getRiskColor = (val: number) => (val > 0.7 ? '#ff4d4f' : val > 0.4 ? '#ffb800' : '#00ffff');
+    const getStatusColor = (status: string) =>
+      status === 'online' ? '#00ff88' :
+      status === 'maintenance' ? '#ffaa00' : '#ff4444';
 
-    const points = [
-      { name: '监测点 A', coord: [110.1881, 22.684], temp: 26.5, hum: 85, risk: 0.78 },
-      { name: '监测点 B', coord: [110.19, 22.625], temp: 25.1, hum: 80, risk: 0.42 },
-      { name: '监测点 C', coord: [110.17, 22.635], temp: 27.2, hum: 88, risk: 0.22 },
-      { name: '监测点 D', coord: [110.178, 22.628], temp: 28.6, hum: 75, risk: 0.63 },
-      { name: '监测点 E', coord: [110.175, 22.627], temp: 24.8, hum: 83, risk: 0.34 },
-    ];
+    // 默认地图中心点
+    const defaultCenter = [110.1805, 22.6263];
 
     const tdtKey = 'cc688e28c157fc3473807854c945f375';
     const createTdtLayer = (layerType: string) => new TileLayer({
@@ -115,12 +138,15 @@ export default function MapContainer({ mode }: { mode: '2D' | '卫星图' }) {
 
     const baseLayer = mode === '卫星图' ? [createTdtLayer('img'), createTdtLayer('cia')] : [createOSMLayer()];
 
+    // 使用默认中心点初始化地图，后续通过单独的useEffect更新
+    const mapCenter = defaultCenter;
+
     const map = new Map({
       target: mapRef.current!,
       layers: baseLayer,
       view: new View({
-        center: fromLonLat([110.1805, 22.6263]),
-        zoom: 11,
+        center: fromLonLat(mapCenter),
+        zoom: zoom,
         maxZoom: 18,
         minZoom: 5,
       }),
@@ -134,28 +160,9 @@ export default function MapContainer({ mode }: { mode: '2D' | '卫星图' }) {
       ])
     });
 
-    const features = points.map(p => {
-      const f = new Feature({ geometry: new Point(fromLonLat(p.coord)), ...p });
-      f.setStyle(new Style({
-        image: new CircleStyle({ radius: 8, fill: new Fill({ color: 'rgba(0,255,255,0.6)' }), stroke: new Stroke({ color: '#00ffff', width: 2 }) }),
-        text: new Text({ text: p.name, offsetY: -18, fill: new Fill({ color: '#00ffff' }), stroke: new Stroke({ color: '#001529', width: 2 }), font: '12px sans-serif' })
-      }));
-      return f;
-    });
+    // 地图初始化完成，设备图层将由单独的useEffect处理
 
-    const clusterSource = new Cluster({ distance: 40, source: new VectorSource({ features }) });
-    const clusterLayer = new VectorLayer({
-      source: clusterSource,
-      style: f => {
-        const size = f.get('features').length;
-        return size === 1 ? f.get('features')[0].getStyle() : new Style({
-          image: new CircleStyle({ radius: 12, fill: new Fill({ color: 'rgba(0,255,255,0.5)' }), stroke: new Stroke({ color: '#00ffff', width: 2 }) }),
-          text: new Text({ text: size.toString(), fill: new Fill({ color: '#fff' }), font: 'bold 12px sans-serif' })
-        });
-      }
-    });
-    map.addLayer(clusterLayer);
-
+    // 创建弹窗覆盖层
     const overlay = new Overlay({
       element: overlayRef.current!,
       autoPan: { animation: { duration: 300, easing: easeOut } },
@@ -163,31 +170,168 @@ export default function MapContainer({ mode }: { mode: '2D' | '卫星图' }) {
     });
     map.addOverlay(overlay);
 
-    map.on('singleclick', e => {
-      const fs = map.getFeaturesAtPixel(e.pixel);
-      overlay.setPosition(undefined);
-      setClusterPoints(null);
+    mapInstance.current = map;
+  }, [mode]); // 只在mode变化时重新创建地图
 
-      if (fs && fs.length > 0) {
-        const cluster = fs[0].get('features');
-        if (cluster.length === 1) {
-          const f = cluster[0];
-          overlayRef.current!.innerHTML = `
-            <div style="background: rgba(0,21,41,0.85); border: 1px solid #00ffff; border-radius: 10px; box-shadow: 0 0 10px rgba(0,255,255,0.4); padding: 10px 14px; color: #fff; font-family: 'Microsoft YaHei'; font-size: 12px; line-height: 1.8; white-space: nowrap; caret-color: transparent; user-select: none; pointer-events: none;">
-              <div style="font-size: 14px; font-weight: bold; color: #00ffff;">${f.get('name')}</div>
-              <div><span style="color:#ccc;">温度：</span>${f.get('temp')}°C</div>
-              <div><span style="color:#ccc;">湿度：</span>${f.get('hum')}%</div>
-              <div><span style="color:#ccc;">滑坡概率：</span><span style="color: ${getRiskColor(f.get('risk'))};">${(f.get('risk') * 100).toFixed(0)}%</span></div>
-            </div>`;
-          overlay.setPosition(f.getGeometry().getCoordinates());
-        } else {
-          setClusterPoints(cluster);
-        }
+  // 单独处理设备数据和视图更新 - 不重新创建地图
+  useEffect(() => {
+    if (!mapInstance.current) return;
+
+    const map = mapInstance.current;
+
+    // 更新地图中心点和缩放级别
+    if (center && center.length === 2) {
+      map.getView().animate({
+        center: fromLonLat(center),
+        zoom: zoom || 11,
+        duration: 1000
+      });
+    }
+
+    // 清除现有的设备图层
+    const existingLayers = map.getLayers().getArray();
+    existingLayers.forEach(layer => {
+      if (layer.get('name') === 'devices') {
+        map.removeLayer(layer);
       }
     });
 
-    mapInstance.current = map;
-  }, [mode]);
+    // 添加新的设备图层
+    if (devices && devices.length > 0) {
+      const getRiskColor = (val: number) => (val > 0.7 ? '#ff4d4f' : val > 0.4 ? '#ffb800' : '#00ffff');
+      const getStatusColor = (status: string) =>
+        status === 'online' ? '#00ff88' :
+        status === 'maintenance' ? '#ffaa00' : '#ff4444';
+
+      const features = devices.map(p => {
+        const f = new Feature({ geometry: new Point(fromLonLat(p.coord)), ...p });
+        const statusColor = getStatusColor(p.status);
+        const isOnline = p.status === 'online';
+
+        // 创建精细的设备标点样式
+        if (isOnline) {
+          f.setStyle([
+            // 外圈脉冲效果 - 更小更透明
+            new Style({
+              image: new CircleStyle({
+                radius: 12,
+                fill: new Fill({ color: 'rgba(0,255,136,0.15)' }),
+                stroke: new Stroke({ color: 'rgba(0,255,136,0.4)', width: 1 })
+              })
+            }),
+            // 主要标点 - 更小更精细
+            new Style({
+              image: new CircleStyle({
+                radius: 6,
+                fill: new Fill({ color: 'rgba(0,255,136,0.9)' }),
+                stroke: new Stroke({ color: '#ffffff', width: 2 })
+              }),
+              text: new Text({
+                text: p.name,
+                offsetY: -18,
+                fill: new Fill({ color: '#ffffff' }),
+                stroke: new Stroke({ color: '#001529', width: 2 }),
+                font: 'bold 11px Microsoft YaHei, sans-serif',
+                backgroundFill: new Fill({ color: 'rgba(0,21,41,0.85)' }),
+                backgroundStroke: new Stroke({ color: statusColor, width: 1 }),
+                padding: [2, 6, 2, 6]
+              })
+            })
+          ]);
+        } else {
+          f.setStyle(new Style({
+            image: new CircleStyle({
+              radius: 6,
+              fill: new Fill({ color: 'rgba(255,68,68,0.9)' }),
+              stroke: new Stroke({ color: '#ffffff', width: 2 })
+            }),
+            text: new Text({
+              text: p.name,
+              offsetY: -18,
+              fill: new Fill({ color: '#ffffff' }),
+              stroke: new Stroke({ color: '#001529', width: 2 }),
+              font: 'bold 11px Microsoft YaHei, sans-serif',
+              backgroundFill: new Fill({ color: 'rgba(0,21,41,0.85)' }),
+              backgroundStroke: new Stroke({ color: statusColor, width: 1 }),
+              padding: [2, 6, 2, 6]
+            })
+          }));
+        }
+
+        return f;
+      });
+
+      const clusterSource = new Cluster({ distance: 40, source: new VectorSource({ features }) });
+      const clusterLayer = new VectorLayer({
+        source: clusterSource,
+        style: f => {
+          const size = f.get('features').length;
+          return size === 1 ? f.get('features')[0].getStyle() : new Style({
+            image: new CircleStyle({ radius: 12, fill: new Fill({ color: 'rgba(0,255,255,0.5)' }), stroke: new Stroke({ color: '#00ffff', width: 2 }) }),
+            text: new Text({ text: size.toString(), fill: new Fill({ color: '#fff' }), font: 'bold 12px sans-serif' })
+          });
+        }
+      });
+
+      clusterLayer.set('name', 'devices'); // 标记图层名称
+      map.addLayer(clusterLayer);
+
+      // 添加点击事件处理
+      const clickHandler = (e: any) => {
+        const fs = map.getFeaturesAtPixel(e.pixel);
+        const overlays = map.getOverlays().getArray();
+        const overlay = overlays[0]; // 获取第一个覆盖层
+
+        if (overlay) {
+          overlay.setPosition(undefined);
+        }
+        setClusterPoints(null);
+
+        if (fs && fs.length > 0) {
+          const cluster = fs[0].get('features');
+          if (cluster.length === 1) {
+            const f = cluster[0];
+            const statusColor = getStatusColor(f.get('status'));
+            const statusText = f.get('status') === 'online' ? '在线' :
+                              f.get('status') === 'maintenance' ? '维护中' : '离线';
+            const riskDisplay = f.get('risk') !== undefined
+              ? `<div><span style="color:#ccc;">滑坡概率：</span><span style="color: ${getRiskColor(f.get('risk'))};">${(f.get('risk') * 100).toFixed(0)}%</span></div>`
+              : '';
+
+            if (overlayRef.current) {
+              overlayRef.current.innerHTML = `
+                <div style="background: rgba(0,21,41,0.85); border: 1px solid ${statusColor}; border-radius: 10px; box-shadow: 0 0 10px rgba(0,255,255,0.4); padding: 10px 14px; color: #fff; font-family: 'Microsoft YaHei'; font-size: 12px; line-height: 1.8; white-space: nowrap; caret-color: transparent; user-select: none; pointer-events: none;">
+                  <div style="font-size: 14px; font-weight: bold; color: ${statusColor};">${f.get('name')}</div>
+                  <div><span style="color:#ccc;">设备状态：</span><span style="color: ${statusColor};">${statusText}</span></div>
+                  <div><span style="color:#ccc;">温度：</span>${f.get('temp')}°C</div>
+                  <div><span style="color:#ccc;">湿度：</span>${f.get('hum')}%</div>
+                  ${riskDisplay}
+                </div>`;
+              overlay?.setPosition(f.getGeometry().getCoordinates());
+            }
+          } else {
+            setClusterPoints(cluster);
+          }
+        }
+      };
+
+      // 移除旧的点击事件监听器（如果存在）
+      if (clickHandlerRef.current) {
+        map.un('singleclick', clickHandlerRef.current);
+      }
+      // 添加新的点击事件监听器
+      map.on('singleclick', clickHandler);
+      // 保存引用以便后续移除
+      clickHandlerRef.current = clickHandler;
+    }
+
+    // 清理函数
+    return () => {
+      if (mapInstance.current && clickHandlerRef.current) {
+        mapInstance.current.un('singleclick', clickHandlerRef.current);
+      }
+    };
+  }, [devices, center, zoom]); // 只在设备数据、中心点或缩放级别变化时更新
 
   return (
     <div className="w-full h-full relative rounded-2xl shadow-inner overflow-hidden">

@@ -21,7 +21,7 @@ const DeviceErrorChart = () => {
 
     // ✅ 设备排序：按异常数量降序
     const sortedData = [...data].sort((a, b) => b.count - a.count)
-    const devices = sortedData.map(item => getFriendlyName(item.device_id))
+    const devices = sortedData.map(item => item.device_id === 'device_1' ? '龙门滑坡监测站' : item.device_id)
     const values = sortedData.map(item => item.count)
 
     const maxValue = Math.max(...values)

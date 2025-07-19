@@ -2,7 +2,13 @@
 
 import useSensorData from './useSensorData';
 
-export default function useAcceleration() {
+interface AccelerationData {
+  data: Record<string, { time: string; value: number }[]>;
+  loading: boolean;
+  error: Error | null;
+}
+
+export default function useAcceleration(): AccelerationData {
   const { data, loading, error } = useSensorData();
 
   const grouped: Record<string, { time: string; value: number }[]> = {};

@@ -9,7 +9,7 @@ import { useIotDataStore } from '../../lib/useIotDataStore';
  * 使用Supabase实时订阅替代轮询，提升性能
  */
 export default function useRealtimeData() {
-  const { data, loading, error, fetchData, subscribeToRealtime, useMockData } = useIotDataStore();
+  const { data, loading, error, fetchData, subscribeToRealtime } = useIotDataStore();
 
   useEffect(() => {
     // 初始数据加载
@@ -20,7 +20,7 @@ export default function useRealtimeData() {
 
     // 清理订阅
     return unsubscribe;
-  }, [fetchData, subscribeToRealtime, useMockData]); // 移除 error 依赖
+  }, [fetchData, subscribeToRealtime]); // 移除 useMockData 依赖
 
   // 数据处理函数
   const getTemperatureData = () => {

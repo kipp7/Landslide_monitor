@@ -277,7 +277,4 @@ class DeviceMapper {
   }
 }
 
-// 创建全局实例
-const deviceMapper = new DeviceMapper();
-
-module.exports = { DeviceMapper, deviceMapper };
+module.exports = DeviceMapper;

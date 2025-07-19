@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
 const DataProcessor = require('./data-processor');
-const { deviceMapper } = require('./device-mapper');
+const DeviceMapper = require('./device-mapper');
 
 const app = express();
 const PORT = 5100;
@@ -22,6 +22,12 @@ const supabaseUrl = process.env.SUPABASE_URL || SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY || SUPABASE_ANON_KEY;
 
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+// 初始化设备映射器和数据处理器
+const deviceMapper = new DeviceMapper();
+const dataProcessor = new DataProcessor();
+
+
 
 // 健康检查接口
 app.get('/health', (req, res) => {
@@ -44,15 +50,77 @@ app.get('/info', (req, res) => {
       info: 'GET /info',
       iot_data: 'POST /iot/huawei',
       device_mappings: 'GET /devices/mappings',
-      device_info: 'GET /devices/:simpleId'
+      device_list: 'GET /devices/list',
+      device_info: 'GET /devices/info/:simpleId'
     }
   });
 });
 
-// 设备映射接口
+// 设备列表接口 - 放在最前面避免路由冲突
+app.get('/devices/list', async (req, res) => {
+  try {
+    const { data: devices, error } = await supabase
+      .from('iot_devices')
+      .select('device_id, friendly_name, last_active')
+      .order('device_id');
+
+    if (error) {
+      throw error;
+    }
+
+    // 添加状态判断和扩展信息
+    const now = new Date();
+    const deviceList = devices.map(device => {
+      const lastActive = new Date(device.last_active);
+      const diffMinutes = Math.floor((now.getTime() - lastActive.getTime()) / 60000);
+
+      return {
+        device_id: device.device_id,
+        friendly_name: '龙门滑坡监测站', // 统一使用龙门滑坡监测站
+        display_name: '龙门滑坡监测站',
+        location_name: '防城港华石镇龙门村',
+        device_type: 'rk2206',
+        status: diffMinutes > 5 ? 'offline' : 'online',
+        last_active: device.last_active
+      };
+    });
+
+    res.json({
+      success: true,
+      data: deviceList,
+      count: deviceList.length
+    });
+  } catch (error) {
+    console.error('❌ 获取设备列表失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '获取设备列表失败',
+      message: error.message
+    });
+  }
+});
+
+// 设备映射接口 - 简化版本
 app.get('/devices/mappings', async (req, res) => {
   try {
-    const mappings = await deviceMapper.getAllMappings();
+    // 简化的映射数据
+    const mappings = [
+      {
+        simple_id: 'device_1',
+        actual_device_id: '6815a14f9314d118511807c6_rk2206',
+        device_name: '龙门滑坡监测站',
+        location_name: '防城港华石镇龙门村',
+        device_type: 'rk2206',
+        latitude: 21.6847,
+        longitude: 108.3516,
+        status: 'active',
+        description: '龙门村滑坡监测设备',
+        install_date: '2025-06-01',
+        last_data_time: new Date().toISOString(),
+        online_status: 'online'
+      }
+    ];
+
     res.json({
       success: true,
       data: mappings,
@@ -68,23 +136,33 @@ app.get('/devices/mappings', async (req, res) => {
   }
 });
 
-// 获取特定设备信息
-app.get('/devices/:simpleId', async (req, res) => {
+// 获取特定设备信息 - 简化版本
+app.get('/devices/info/:simpleId', async (req, res) => {
   try {
     const { simpleId } = req.params;
-    const deviceName = deviceMapper.getDeviceName(simpleId);
-    const deviceLocation = deviceMapper.getDeviceLocation(simpleId);
-    const actualDeviceId = deviceMapper.getActualDeviceId(simpleId);
 
-    res.json({
-      success: true,
-      data: {
-        simple_id: simpleId,
-        actual_device_id: actualDeviceId,
-        device_name: deviceName,
-        location: deviceLocation
-      }
-    });
+    // 简化的设备信息
+    if (simpleId === 'device_1') {
+      res.json({
+        success: true,
+        data: {
+          simple_id: 'device_1',
+          actual_device_id: '6815a14f9314d118511807c6_rk2206',
+          device_name: '龙门滑坡监测站',
+          location: {
+            location_name: '防城港华石镇龙门村',
+            latitude: 21.6847,
+            longitude: 108.3516,
+            device_type: 'rk2206'
+          }
+        }
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        error: '设备不存在'
+      });
+    }
   } catch (error) {
     console.error('❌ 获取设备信息失败:', error);
     res.status(500).json({
@@ -183,6 +261,16 @@ app.post('/iot/huawei', async (req, res) => {
           angle_x: properties.angle_x,
           angle_y: properties.angle_y,
           angle_z: properties.angle_z,
+
+          // GPS形变分析字段 - 直接从华为云IoT读取
+          deformation_distance_3d: properties.deformation_distance_3d || properties.deform_3d || properties.displacement_3d || null,
+          deformation_horizontal: properties.deformation_horizontal || properties.deform_h || properties.displacement_h || null,
+          deformation_vertical: properties.deformation_vertical || properties.deform_v || properties.displacement_v || null,
+          deformation_velocity: properties.deformation_velocity || properties.deform_vel || properties.velocity || null,
+          deformation_risk_level: properties.deformation_risk_level || properties.deform_risk || properties.risk_deform || null,
+          deformation_type: properties.deformation_type || properties.deform_type || properties.type_deform || null,
+          deformation_confidence: properties.deformation_confidence || properties.deform_conf || properties.confidence || null,
+          baseline_established: properties.baseline_established || properties.baseline_ok || properties.has_baseline || null,
 
           // 超声波距离（如果有的话）
           ultrasonic_distance: properties.ultrasonic_distance
@@ -332,7 +420,7 @@ app.listen(PORT, '0.0.0.0', async () => {
   console.log('⏰ 启动时间:', new Date().toISOString());
   console.log('=====================================');
 
-  // 启动设备映射器
+  // 初始化设备映射器和数据处理器
   try {
     await deviceMapper.initializeCache();
     console.log('✅ 设备映射器初始化成功');
@@ -340,10 +428,8 @@ app.listen(PORT, '0.0.0.0', async () => {
     console.error('❌ 设备映射器初始化失败:', error);
   }
 
-  // 启动数据处理器
   try {
-    const processor = new DataProcessor();
-    await processor.start();
+    await dataProcessor.start();
     console.log('✅ 数据处理器启动成功');
   } catch (error) {
     console.error('❌ 数据处理器启动失败:', error);

@@ -98,7 +98,7 @@ const RealtimeAnomalyTable = () => {
       dataIndex: 'anomaly_type',
       key: 'anomaly_type',
       align: 'center' as const,
-      render: (text: string) => <span className="text-cyan-300">{text}</span>,
+      render: (text: string) => <span className="text-cyan-300">{text === 'device_1' ? '龙门滑坡监测站' : text}</span>,
     },
     {
       title: '异常值',

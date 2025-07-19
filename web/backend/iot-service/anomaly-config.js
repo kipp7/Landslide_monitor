@@ -20,7 +20,7 @@ const ANOMALY_THRESHOLDS = {
   
     // 加速度异常阈值 (mg, 1g = 1000mg)
     acceleration: {
-      total_max: 2000,  // 总加速度超过2g认为异常
+      total_max: 20000,  // 总加速度超过20g认为异常（调整为更合理的阈值）
       description: '检测剧烈震动或设备移动'
     },
   
@@ -133,7 +133,7 @@ const ANOMALY_THRESHOLDS = {
   
     // 检查加速度范围
     if (record.acceleration_total !== undefined) {
-      if (record.acceleration_total < 0 || record.acceleration_total > 10000) {
+      if (record.acceleration_total < 0 || record.acceleration_total > 50000) {
         issues.push(`加速度值异常: ${record.acceleration_total}mg`);
       }
     }

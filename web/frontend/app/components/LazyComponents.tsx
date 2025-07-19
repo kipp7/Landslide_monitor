@@ -51,7 +51,21 @@ export const LazyMapContainer = dynamic(
     loading: LoadingSpinner,
     ssr: false,
   }
-) as React.ComponentType<{ mode: '2D' | '卫星图' }>;
+) as React.ComponentType<{
+  mode: '2D' | '卫星图';
+  devices?: Array<{
+    device_id: string;
+    name: string;
+    coord: [number, number];
+    temp: number;
+    hum: number;
+    status: 'online' | 'offline' | 'maintenance';
+    risk?: number;
+    location?: string;
+  }>;
+  center?: [number, number];
+  zoom?: number;
+}>;
 
 export const LazyMap3DContainer = dynamic(
   () => import('./Map3DContainer'),
@@ -108,3 +122,5 @@ export const LazyRealtimeAnomalyTable = dynamic(
     ssr: false,
   }
 );
+
+
