@@ -236,7 +236,7 @@ export default function AnalysisPage() {
                     ) : mapType === '视频' ? (
                       <div className="w-full h-full bg-black rounded-lg flex items-center justify-center">
                         <img
-                          src={`http://192.168.43.55/stream?t=${Date.now()}`}
+                          src={`http://${process.env.NEXT_PUBLIC_CAMERA_IP || '192.168.171.55'}:${process.env.NEXT_PUBLIC_CAMERA_PORT || '80'}/stream?t=${Date.now()}`}
                           className="max-w-full max-h-full object-contain"
                           alt="ESP32-CAM 实时视频流"
                           onError={(e) => {
