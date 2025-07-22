@@ -199,7 +199,7 @@ app.post('/iot/huawei', async (req, res) => {
     
     // 基本数据验证
     if (!req.body || !req.body.notify_data) {
-      console.log('❌ 数据格式错误: 缺少notify_data');
+      console.log('数据格式错误: 缺少notify_data');
       return res.status(400).json({
         "Status Code": 400,
         "message": "数据格式错误",
@@ -210,7 +210,7 @@ app.post('/iot/huawei', async (req, res) => {
     const { notify_data, event_time, resource, event } = req.body;
     
     if (!notify_data.body || !notify_data.body.services) {
-      console.log('❌ 数据格式错误: 缺少services');
+      console.log('数据格式错误: 缺少services');
       return res.status(400).json({
         "Status Code": 400,
         "message": "数据格式错误",
@@ -222,9 +222,9 @@ app.post('/iot/huawei', async (req, res) => {
     const { device_id, product_id } = header;
     const { services } = body;
 
-    console.log(`📱 设备ID: ${device_id}`);
-    console.log(`📦 产品ID: ${product_id}`);
-    console.log(`🔧 服务数量: ${services.length}`);
+    console.log(`设备ID: ${device_id}`);
+    console.log(`产品ID: ${product_id}`);
+    console.log(`服务数量: ${services.length}`);
 
     let processedCount = 0;
 
@@ -232,7 +232,7 @@ app.post('/iot/huawei', async (req, res) => {
     for (const service of services) {
       const { service_id, properties, event_time: serviceEventTime } = service;
       
-      console.log(`\n🔄 处理服务: ${service_id}`);
+      console.log(`\n处理服务: ${service_id}`);
       console.log('属性数据:', properties);
       
       try {
@@ -298,7 +298,7 @@ app.post('/iot/huawei', async (req, res) => {
           }
         });
 
-        console.log('📝 准备插入数据:', sensorData);
+        console.log('准备插入数据:', sensorData);
 
         // 插入到Supabase数据库的 iot_data 表
         const { data, error } = await supabase
@@ -310,7 +310,7 @@ app.post('/iot/huawei', async (req, res) => {
           console.error('❌ 数据库插入失败:', error);
           console.error('错误详情:', error.message);
         } else {
-          console.log('✅ 数据插入成功');
+          console.log('数据插入成功');
           if (data && data.length > 0) {
             console.log('插入的记录ID:', data[0].id);
           }
@@ -323,8 +323,8 @@ app.post('/iot/huawei', async (req, res) => {
     }
 
     const processingTime = Date.now() - startTime;
-    console.log(`\n⏱️  处理完成，耗时: ${processingTime}ms`);
-    console.log(`✅ 成功处理: ${processedCount}/${services.length} 个服务`);
+    console.log(`\n处理完成，耗时: ${processingTime}ms`);
+    console.log(`成功处理: ${processedCount}/${services.length} 个服务`);
     console.log('=== 处理结束 ===\n');
 
     // 返回成功响应给华为云
@@ -429,7 +429,7 @@ app.get('/huawei/config', (req, res) => {
 app.get('/huawei/devices/:deviceId/shadow', async (req, res) => {
   try {
     const { deviceId } = req.params;
-    console.log(`🔍 获取设备影子: ${deviceId}`);
+    console.log(`获取设备影子: ${deviceId}`);
 
     const shadowData = await huaweiIoTService.getDeviceShadow(deviceId);
 
@@ -453,7 +453,7 @@ app.post('/huawei/devices/:deviceId/commands', async (req, res) => {
     const { deviceId } = req.params;
     const commandData = req.body;
 
-    console.log(`📤 向设备下发命令: ${deviceId}`);
+    console.log(`向设备下发命令: ${deviceId}`);
     console.log('命令数据:', JSON.stringify(commandData, null, 2));
 
     // 验证命令数据格式
@@ -622,25 +622,25 @@ app.use((error, req, res, next) => {
 
 // 启动服务器
 app.listen(PORT, '0.0.0.0', async () => {
-  console.log('🏔️  滑坡监测IoT服务已启动');
-  console.log(`📡 端口: ${PORT}`);
-  console.log(`🌐 健康检查: http://localhost:${PORT}/health`);
-  console.log(`📊 服务信息: http://localhost:${PORT}/info`);
-  console.log(`📨 IoT数据接收: http://localhost:${PORT}/iot/huawei`);
-  console.log('⏰ 启动时间:', new Date().toISOString());
+  console.log('滑坡监测IoT服务已启动');
+  console.log(`端口: ${PORT}`);
+  console.log(`健康检查: http://localhost:${PORT}/health`);
+  console.log(`服务信息: http://localhost:${PORT}/info`);
+  console.log(`IoT数据接收: http://localhost:${PORT}/iot/huawei`);
+  console.log('启动时间:', new Date().toISOString());
   console.log('=====================================');
 
   // 初始化设备映射器和数据处理器
   try {
     await deviceMapper.initializeCache();
-    console.log('✅ 设备映射器初始化成功');
+    console.log('设备映射器初始化成功');
   } catch (error) {
     console.error('❌ 设备映射器初始化失败:', error);
   }
 
   try {
     await dataProcessor.start();
-    console.log('✅ 数据处理器启动成功');
+    console.log('数据处理器启动成功');
   } catch (error) {
     console.error('❌ 数据处理器启动失败:', error);
   }

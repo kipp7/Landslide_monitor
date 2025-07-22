@@ -32,9 +32,9 @@ class HuaweiIoTService {
     this.cachedToken = null;
     this.tokenExpireTime = null;
     
-    console.log('🔧 华为云IoT服务初始化完成');
-    console.log('📍 IoT端点:', this.config.iotEndpoint);
-    console.log('📱 设备ID:', this.config.deviceId);
+    console.log('华为云IoT服务初始化完成');
+    console.log('IoT端点:', this.config.iotEndpoint);
+    console.log('设备ID:', this.config.deviceId);
   }
 
   /**
@@ -46,11 +46,11 @@ class HuaweiIoTService {
       // 检查缓存的token是否还有效（提前5分钟刷新）
       if (this.cachedToken && this.tokenExpireTime &&
           Date.now() < this.tokenExpireTime - 5 * 60 * 1000) {
-        console.log('🔑 使用缓存的token');
+        console.log('使用缓存的token');
         return this.cachedToken;
       }
 
-      console.log('🔑 获取新的IAM token...');
+      console.log('获取新的IAM token...');
 
       const authUrl = `${this.config.iamEndpoint}/v3/auth/tokens`;
 
@@ -97,10 +97,10 @@ class HuaweiIoTService {
         // 从响应中获取实际的项目ID
         if (response.data && response.data.token && response.data.token.project) {
           this.config.projectId = response.data.token.project.id;
-          console.log('✅ 从token响应中获取项目ID:', this.config.projectId);
+          console.log('从token响应中获取项目ID:', this.config.projectId);
         }
 
-        console.log('✅ IAM token获取成功');
+        console.log('IAM token获取成功');
         return token;
       } else {
         throw new Error(`认证失败，状态码: ${response.status}`);
@@ -121,7 +121,7 @@ class HuaweiIoTService {
    */
   async getProjectId() {
     try {
-      console.log('🔍 获取项目ID...');
+      console.log('获取项目ID...');
 
       // 先获取domain-scoped token
       const authUrl = `${this.config.iamEndpoint}/v3/auth/tokens`;
@@ -182,7 +182,7 @@ class HuaweiIoTService {
       }
 
       this.config.projectId = cnNorth4Project.id;
-      console.log('✅ 项目ID获取成功:', this.config.projectId);
+      console.log('项目ID获取成功:', this.config.projectId);
 
       return this.config.projectId;
     } catch (error) {
@@ -199,7 +199,7 @@ class HuaweiIoTService {
   async getDeviceShadow(deviceId = null) {
     try {
       const targetDeviceId = deviceId || this.config.deviceId;
-      console.log(`🔍 获取设备影子信息: ${targetDeviceId}`);
+      console.log(`获取设备影子信息: ${targetDeviceId}`);
       
       const token = await this.getToken();
       const shadowUrl = `${this.config.iotEndpoint}/v5/iot/${this.config.projectId}/devices/${targetDeviceId}/shadow`;
@@ -213,7 +213,7 @@ class HuaweiIoTService {
       });
 
       if (response.status === 200) {
-        console.log('✅ 设备影子获取成功');
+        console.log('设备影子获取成功');
         return response.data;
       } else {
         throw new Error(`获取设备影子失败，状态码: ${response.status}`);
@@ -240,7 +240,7 @@ class HuaweiIoTService {
   async sendCommand(commandData, deviceId = null) {
     try {
       const targetDeviceId = deviceId || this.config.deviceId;
-      console.log(`📤 向设备发送命令: ${targetDeviceId}`);
+      console.log(`向设备发送命令: ${targetDeviceId}`);
       console.log('命令数据:', JSON.stringify(commandData, null, 2));
       
       const token = await this.getToken();
@@ -255,7 +255,7 @@ class HuaweiIoTService {
       });
 
       if (response.status === 200 || response.status === 201) {
-        console.log('✅ 命令下发成功');
+        console.log('命令下发成功');
         console.log('响应数据:', JSON.stringify(response.data, null, 2));
         return response.data;
       } else {

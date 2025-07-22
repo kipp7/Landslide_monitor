@@ -609,13 +609,10 @@ static void mqtt_message_arrived(MessageData *data)
         // 不要因为响应发送失败就断开连接，继续处理命令
         // mqttConnectFlag = 0;
     } else {
-        printf("SUCCESS: Response published successfully to Huawei Cloud!\n");
-        printf("Response sent for request_id: %s\n", request_id);
-        printf("Huawei Cloud should receive this response within 20 seconds\n");
+        printf("Command response sent (request_id: %s)\n", request_id);
     }
 
     /*{"command_name":"cmd","paras":{"cmd_value":"1"},"service_id":"server"}*/
-    printf("Now processing the command...\n");
     root = cJSON_ParseWithLength(data->message->payload, data->message->payloadlen);
     if (root != NULL) {
         cmd_name = cJSON_GetObjectItem(root, "command_name");
@@ -645,7 +642,6 @@ static void mqtt_message_arrived(MessageData *data)
     }
 
     cJSON_Delete(root);
-    printf("Command processing completed\n");
 }
 
 
@@ -1876,12 +1872,6 @@ void IoTCloud_HandleConfigCommand(const char *config_data)
  */
 void IoTCloud_HandleMotorCommand(bool enable, int speed, int direction, int duration)
 {
-    printf("Handling motor command: %s\n", enable ? "ENABLE" : "DISABLE");
-    printf("Speed: %d%%, Direction: %s, Duration: %ds\n",
-           speed,
-           direction == 0 ? "STOP" :
-           direction == 1 ? "FORWARD" : "REVERSE",
-           duration);
 
     // 更新全局控制变量
     g_cloud_motor_enabled = enable;
@@ -1893,8 +1883,6 @@ void IoTCloud_HandleMotorCommand(bool enable, int speed, int direction, int dura
     if (enable) {
         // 根据方向控制电机
         if (direction == MOTOR_DIRECTION_STOP) {
-            // 停止电机
-            printf("Motor stopped\n");
             Motor_Off();
         } else {
             // 运行电机，将秒转换为毫秒
@@ -1902,8 +1890,6 @@ void IoTCloud_HandleMotorCommand(bool enable, int speed, int direction, int dura
             Motor_Run(speed, (MotorDirection)direction, duration_ms);
         }
     } else {
-        // 停止电机
-        printf("Motor deactivated\n");
         Motor_Off();
     }
 }
@@ -1917,13 +1903,11 @@ void IoTCloud_HandleMotorCommand(bool enable, int speed, int direction, int dura
  */
 void IoTCloud_HandleBuzzerCommand(bool enable, int frequency, int duration, int pattern)
 {
-    printf("Handling buzzer command: %s\n", enable ? "ENABLE" : "DISABLE");
-    printf("Frequency: %dHz, Duration: %ds, Pattern: %s\n",
-           frequency,
-           duration,
-           pattern == 0 ? "CONTINUOUS" :
-           pattern == 1 ? "SHORT_BEEP" :
-           pattern == 2 ? "LONG_BEEP" : "INTERMITTENT");
+    if (enable) {
+        printf("Buzzer: %dHz, %ds, pattern=%d\n", frequency, duration, pattern);
+    } else {
+        printf("Buzzer stopped\n");
+    }
 
     // 更新全局控制变量
     g_cloud_buzzer_enabled = enable;
@@ -1985,9 +1969,6 @@ void IoTCloud_HandleBuzzerCommand(bool enable, int frequency, int duration, int 
  */
 void IoTCloud_HandleRGBCommand(bool enable, int red, int green, int blue)
 {
-    printf("Handling RGB command: %s (R:%d, G:%d, B:%d)\n",
-           enable ? "ENABLE" : "DISABLE", red, green, blue);
-
     g_cloud_rgb_enabled = enable;
     g_cloud_rgb_red = red;
     g_cloud_rgb_green = green;
@@ -1995,10 +1976,9 @@ void IoTCloud_HandleRGBCommand(bool enable, int red, int green, int blue)
 
     // 实际控制RGB LED的代码
     if (enable) {
-        // 设置RGB颜色
-        printf("RGB LED set to R:%d G:%d B:%d\n", red, green, blue);
+        printf("RGB LED: R:%d G:%d B:%d\n", red, green, blue);
     } else {
-        // 关闭RGB LED
+        printf("RGB LED: OFF\n");
         printf("RGB LED turned off\n");
     }
 }
@@ -2119,44 +2099,22 @@ void IoTCloud_HandleTestModeCommand(bool enable)
  */
 void set_motor_state(cJSON *root)
 {
-    printf("=== MOTOR CONTROL COMMAND ===\n");
-
-    // 打印完整的JSON内容用于调试
-    char *json_string = cJSON_Print(root);
-    if (json_string) {
-        printf("Full JSON received: %s\n", json_string);
-        free(json_string);
-    }
+    printf("Motor control command received\n");
 
     cJSON *paras = cJSON_GetObjectItem(root, "paras");
     if (paras != NULL) {
-        // 打印paras内容
-        char *paras_string = cJSON_Print(paras);
-        if (paras_string) {
-            printf("Paras content: %s\n", paras_string);
-            free(paras_string);
-        }
         cJSON *enable = cJSON_GetObjectItem(paras, "enable");
         cJSON *speed = cJSON_GetObjectItem(paras, "speed");
         cJSON *direction = cJSON_GetObjectItem(paras, "direction");
         cJSON *duration = cJSON_GetObjectItem(paras, "duration");
 
-        // 调试：检查每个参数的存在性和类型
-        printf("Parameter check:\n");
-        printf("  enable: %s (type: %d)\n", enable ? "exists" : "NULL", enable ? enable->type : -1);
-        printf("  speed: %s (type: %d)\n", speed ? "exists" : "NULL", speed ? speed->type : -1);
-        printf("  direction: %s (type: %d)\n", direction ? "exists" : "NULL", direction ? direction->type : -1);
-        printf("  duration: %s (type: %d)\n", duration ? "exists" : "NULL", duration ? duration->type : -1);
-
         if (cJSON_IsBool(enable)) {
-            printf("Enable parameter is boolean, value: %s\n", cJSON_IsTrue(enable) ? "true" : "false");
             bool motor_enabled = cJSON_IsTrue(enable);
 
             // 对于停止命令，只需要enable参数
             if (!motor_enabled) {
                 g_motor_stop_commands++;
-                printf("*** STOPPING MOTOR *** (Stop command #%d)\n", g_motor_stop_commands);
-                printf("Raw parameters: enable=false (stop command)\n");
+                printf("STOPPING MOTOR (Stop command #%d)\n", g_motor_stop_commands);
 
                 // 更新全局变量为停止状态
                 g_cloud_motor_enabled = false;
@@ -2164,23 +2122,13 @@ void set_motor_state(cJSON *root)
                 g_cloud_motor_direction = MOTOR_DIRECTION_STOP;
                 g_cloud_motor_duration = 0;
 
-                printf("Calling Motor_Off() directly...\n");
                 Motor_Off();  // 直接调用停止函数
-                printf("Motor_Off() called successfully\n");
-                printf("Motor stopped directly\n");
-
-                // 额外确保停止
-                printf("Double-checking motor stop...\n");
-                Motor_Off();
-                printf("Motor stop confirmed\n");
+                printf("Motor stopped\n");
             } else {
                 // 对于启动命令，需要解析所有参数
                 int motor_speed = cJSON_IsNumber(speed) ? speed->valueint : 50;
                 int motor_direction = cJSON_IsNumber(direction) ? direction->valueint : 1;
                 int motor_duration = cJSON_IsNumber(duration) ? duration->valueint : 0;
-
-                printf("Raw parameters: enable=true, speed=%d, direction=%d, duration=%d\n",
-                       motor_speed, motor_direction, motor_duration);
 
                 // 参数验证
                 if (motor_speed < 0) motor_speed = 0;
@@ -2194,11 +2142,9 @@ void set_motor_state(cJSON *root)
                 g_cloud_motor_direction = (MotorDirection)motor_direction;
                 g_cloud_motor_duration = motor_duration;
 
-                printf("Final parameters: enable=ON, speed=%d%%, direction=%d, duration=%ds\n",
-                       motor_speed, motor_direction, motor_duration);
-
                 g_motor_start_commands++;
-                printf("*** STARTING MOTOR *** (Start command #%d)\n", g_motor_start_commands);
+                printf("STARTING MOTOR (Start command #%d): speed=%d%%, direction=%d, duration=%ds\n",
+                       g_motor_start_commands, motor_speed, motor_direction, motor_duration);
                 // 调用实际的马达控制函数
                 IoTCloud_HandleMotorCommand(motor_enabled, motor_speed, motor_direction, motor_duration);
             }
@@ -2287,15 +2233,12 @@ void set_rgb_state(cJSON *root)
             // 对于停止命令，只需要enable参数
             if (!rgb_enabled) {
                 printf("*** STOPPING RGB LED ***\n");
-                printf("Raw parameters: enable=false (stop command)\n");
-
                 // 更新全局变量为停止状态
                 g_cloud_rgb_enabled = false;
                 g_cloud_rgb_red = 0;
                 g_cloud_rgb_green = 0;
                 g_cloud_rgb_blue = 0;
 
-                printf("RGB: OFF (R:0, G:0, B:0)\n");
                 IoTCloud_HandleRGBCommand(false, 0, 0, 0);
             } else {
                 // 对于启动命令，需要解析颜色参数
@@ -2317,8 +2260,6 @@ void set_rgb_state(cJSON *root)
                 g_cloud_rgb_green = rgb_green;
                 g_cloud_rgb_blue = rgb_blue;
 
-                printf("*** STARTING RGB LED ***\n");
-                printf("RGB: ON (R:%d, G:%d, B:%d)\n", rgb_red, rgb_green, rgb_blue);
                 IoTCloud_HandleRGBCommand(rgb_enabled, rgb_red, rgb_green, rgb_blue);
             }
         } else {

@@ -656,8 +656,7 @@ void Motor_Run(uint8_t speed, MotorDirection direction, uint32_t duration_ms)
         g_motor_start_time = LOS_TickCountGet();
         g_motor_duration_ms = duration_ms;
         g_motor_auto_stop_enabled = true;
-        printf("Motor auto-stop timer set: start_time=%d, duration=%d ms, target_ticks=%d\n",
-               g_motor_start_time, duration_ms, duration_ms);
+        printf("Motor auto-stop timer set for %d ms\n", duration_ms);
     } else {
         // 持续运行模式
         g_motor_auto_stop_enabled = false;
@@ -675,28 +674,19 @@ void Motor_CheckAutoStop(void)
         return;
     }
 
-    // 添加调试信息确认函数被调用
-    static uint32_t debug_call_count = 0;
-    debug_call_count++;
-    if (debug_call_count % 15 == 1) {  // 每15次调用打印一次（约1秒）
-        printf("Motor_CheckAutoStop called #%d (auto_stop_enabled=%s)\n",
-               debug_call_count, g_motor_auto_stop_enabled ? "true" : "false");
-    }
-
     uint32_t current_time = LOS_TickCountGet();
     uint32_t elapsed_ticks = current_time - g_motor_start_time;
     uint32_t elapsed_ms = elapsed_ticks;  // 在rk2206上，1 tick = 1 ms
 
-    // 每秒打印一次调试信息
+    // 每2秒打印一次运行状态（减少输出频率）
     static uint32_t last_debug_time = 0;
-    if (current_time - last_debug_time >= 1000) {  // 每1000ms = 每秒
-        printf("Motor running: %d/%d ms (ticks: %d)\n",
-               elapsed_ms, g_motor_duration_ms, elapsed_ticks);
+    if (current_time - last_debug_time >= 2000) {  // 每2秒
+        printf("Motor running: %d/%d ms\n", elapsed_ms, g_motor_duration_ms);
         last_debug_time = current_time;
     }
 
     if (elapsed_ms >= g_motor_duration_ms) {
-        printf("*** Motor auto-stop triggered after %d milliseconds ***\n", elapsed_ms);
+        printf("Motor auto-stop triggered after %d ms\n", elapsed_ms);
         Motor_Off();
     }
 }
