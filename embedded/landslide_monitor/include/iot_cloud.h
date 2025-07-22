@@ -71,6 +71,16 @@ typedef struct {
     float gps_altitude;    // GPS海拔高度 (米)
     bool gps_valid;        // GPS数据有效性
 
+    // GPS形变分析数据
+    float deformation_distance_3d;      // 3D总位移距离 (米)
+    float deformation_horizontal;       // 水平位移距离 (米)
+    float deformation_vertical;         // 垂直位移距离 (米)
+    float deformation_velocity;         // 形变速度 (米/小时)
+    int deformation_risk_level;         // 形变风险等级 (0-4)
+    int deformation_type;               // 形变类型 (0-4)
+    float deformation_confidence;       // 形变分析置信度 (0.0-1.0)
+    bool baseline_established;          // 基准位置是否建立
+
     // 扩展字段
     bool rgb_enabled;      // RGB LED使能
     bool buzzer_enabled;   // 蜂鸣器使能
@@ -114,6 +124,16 @@ typedef struct {
     double angle_x;           // X轴倾角 (°) - decimal
     double angle_y;           // Y轴倾角 (°) - decimal
     double angle_z;           // 总倾斜角度（基于X、Y轴计算） - decimal
+
+    // GPS形变分析数据
+    double deformation_distance_3d;      // 3D总位移距离 (米) - decimal
+    double deformation_horizontal;       // 水平位移距离 (米) - decimal
+    double deformation_vertical;         // 垂直位移距离 (米) - decimal
+    double deformation_velocity;         // 形变速度 (米/小时) - decimal
+    int deformation_risk_level;          // 形变风险等级 (0-4) - int
+    int deformation_type;                // 形变类型 (0-4) - int
+    double deformation_confidence;       // 形变分析置信度 (0.0-1.0) - decimal
+    bool baseline_established;           // 基准位置是否建立 - boolean
 } e_iot_data;
 
 // MQTT 核心功能（基于成熟版本）

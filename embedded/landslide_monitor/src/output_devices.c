@@ -36,6 +36,11 @@ static bool g_voice_initialized = false;
 static bool g_cloud_alarm_acknowledged = false;
 static uint32_t g_last_cloud_command_time = 0;
 
+// 马达自动停止定时器变量
+static bool g_motor_auto_stop_enabled = false;
+static uint32_t g_motor_start_time = 0;
+static uint32_t g_motor_duration_ms = 0;
+
 static RGB_Color g_current_rgb_color = RGB_COLOR_OFF;
 static bool g_alarm_muted = false;
 static void (*g_button_callback)(ButtonState state) = NULL;
@@ -563,7 +568,13 @@ void Motor_VibrateByRisk(RiskLevel risk_level)
 void Motor_Off(void)
 {
     if (g_motor_initialized) {
-        IoTPwmStart(MOTOR_PWM, 1, PWM_FREQ_HZ);  // 使用最小占空比代替0
+        IoTPwmStop(MOTOR_PWM);  // 完全停止PWM输出
+
+        // 清除自动停止定时器
+        g_motor_auto_stop_enabled = false;
+        g_motor_start_time = 0;
+        g_motor_duration_ms = 0;
+        printf("Motor stopped and auto-stop timer cleared\n");
     }
 }
 
@@ -641,11 +652,52 @@ void Motor_Run(uint8_t speed, MotorDirection direction, uint32_t duration_ms)
     // 如果设置了持续时间，启动定时器
     if (duration_ms > 0) {
         printf("Motor will run for %d milliseconds\n", duration_ms);
-        // 这里可以启动一个定时器任务来停止电机
-        // 暂时使用简单的延时实现
-        LOS_Msleep(duration_ms);
+        // 使用非阻塞方式：记录启动时间，在主循环中检查是否需要停止
+        g_motor_start_time = LOS_TickCountGet();
+        g_motor_duration_ms = duration_ms;
+        g_motor_auto_stop_enabled = true;
+        printf("Motor auto-stop timer set: start_time=%d, duration=%d ms, target_ticks=%d\n",
+               g_motor_start_time, duration_ms, duration_ms);
+    } else {
+        // 持续运行模式
+        g_motor_auto_stop_enabled = false;
+        printf("Motor running continuously (no auto-stop)\n");
+    }
+}
+
+/**
+ * @brief 检查马达是否需要自动停止（非阻塞）
+ * 应该在主循环中定期调用此函数
+ */
+void Motor_CheckAutoStop(void)
+{
+    if (!g_motor_auto_stop_enabled) {
+        return;
+    }
+
+    // 添加调试信息确认函数被调用
+    static uint32_t debug_call_count = 0;
+    debug_call_count++;
+    if (debug_call_count % 15 == 1) {  // 每15次调用打印一次（约1秒）
+        printf("Motor_CheckAutoStop called #%d (auto_stop_enabled=%s)\n",
+               debug_call_count, g_motor_auto_stop_enabled ? "true" : "false");
+    }
+
+    uint32_t current_time = LOS_TickCountGet();
+    uint32_t elapsed_ticks = current_time - g_motor_start_time;
+    uint32_t elapsed_ms = elapsed_ticks;  // 在rk2206上，1 tick = 1 ms
+
+    // 每秒打印一次调试信息
+    static uint32_t last_debug_time = 0;
+    if (current_time - last_debug_time >= 1000) {  // 每1000ms = 每秒
+        printf("Motor running: %d/%d ms (ticks: %d)\n",
+               elapsed_ms, g_motor_duration_ms, elapsed_ticks);
+        last_debug_time = current_time;
+    }
+
+    if (elapsed_ms >= g_motor_duration_ms) {
+        printf("*** Motor auto-stop triggered after %d milliseconds ***\n", elapsed_ms);
         Motor_Off();
-        printf("Motor stopped after %d milliseconds\n", duration_ms);
     }
 }
 

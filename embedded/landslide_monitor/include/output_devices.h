@@ -151,6 +151,7 @@ void Motor_VibrateByRisk(RiskLevel risk_level);
 void Motor_Off(void);
 void Motor_SetDirection(MotorDirection direction);
 void Motor_Run(uint8_t speed, MotorDirection direction, uint32_t duration_ms);
+void Motor_CheckAutoStop(void);  // 检查马达自动停止（非阻塞）
 
 // 报警灯控制
 int AlarmLight_Init(void);

@@ -657,6 +657,9 @@ static void SensorCollectionTask(void)
         // 通知数据处理任务
         LOS_SemPost(g_sensor_sem);
 
+        // 检查马达自动停止（非阻塞）
+        Motor_CheckAutoStop();
+
         // 等待下次采样
         LOS_Msleep(sample_interval_ms);
     }
@@ -1025,6 +1028,29 @@ static void AlarmTask(void)
                 iot_data.gps_longitude = sensor_data.gps_longitude;
                 iot_data.gps_altitude = sensor_data.gps_altitude;
                 iot_data.gps_valid = sensor_data.gps_valid;
+
+                // 填充GPS形变分析数据
+                GPSDeformationAnalysis deform_analysis;
+                if (GPS_Deformation_GetAnalysis(&deform_analysis) == 0) {
+                    iot_data.deformation_distance_3d = deform_analysis.displacement.distance_3d;
+                    iot_data.deformation_horizontal = deform_analysis.displacement.horizontal_distance;
+                    iot_data.deformation_vertical = deform_analysis.displacement.vertical_distance;
+                    iot_data.deformation_velocity = deform_analysis.velocity.total_velocity;
+                    iot_data.deformation_risk_level = (int)deform_analysis.risk_level;
+                    iot_data.deformation_type = (int)deform_analysis.deform_type;
+                    iot_data.deformation_confidence = deform_analysis.confidence;
+                    iot_data.baseline_established = deform_analysis.baseline_established;
+                } else {
+                    // GPS形变分析无效时的默认值
+                    iot_data.deformation_distance_3d = 0.0f;
+                    iot_data.deformation_horizontal = 0.0f;
+                    iot_data.deformation_vertical = 0.0f;
+                    iot_data.deformation_velocity = 0.0f;
+                    iot_data.deformation_risk_level = 0;
+                    iot_data.deformation_type = 0;
+                    iot_data.deformation_confidence = 0.0f;
+                    iot_data.baseline_established = false;
+                }
 
                 // 填充系统状态
                 iot_data.risk_level = assessment.level;

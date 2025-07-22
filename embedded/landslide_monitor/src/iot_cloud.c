@@ -44,6 +44,10 @@ static MQTTClient client;
 
 // 前向声明
 static void convert_landslide_to_iot_data(const LandslideIotData *landslide_data, e_iot_data *iot_data);
+void set_motor_state(cJSON *root);
+void set_buzzer_state(cJSON *root);
+void set_rgb_state(cJSON *root);
+void set_alarm_reset(void);
 
 static unsigned int mqttConnectFlag = 0;
 
@@ -1483,6 +1487,10 @@ int IoTCloud_SendData(const LandslideIotData *data)
         printf("GPS: %.6f°, %.6f° (%s) | Altitude=%.1fm\n",
                data->gps_latitude, data->gps_longitude,
                data->gps_valid ? "Valid" : "Default", data->gps_altitude);
+        printf("Deform: %.1fm (H:%.1fm V:%.1fm) | Vel:%.2fm/h | Risk:%d | Base:%s\n",
+               data->deformation_distance_3d, data->deformation_horizontal, data->deformation_vertical,
+               data->deformation_velocity, data->deformation_risk_level,
+               data->baseline_established ? "Yes" : "No");
         printf(" 缓存状态: %d/%d条 | 连接: WiFi=%s MQTT=%s\n",
                g_data_cache.count, MAX_CACHE_SIZE,
                g_connection_status.wifi_connected ? "√" : "×",
@@ -1579,6 +1587,16 @@ static void convert_landslide_to_iot_data(const LandslideIotData *landslide_data
         iot_data->longitude = 108.3669;    // 广西南宁经度
     }
 
+    // GPS形变分析数据（decimal类型）
+    iot_data->deformation_distance_3d = (double)landslide_data->deformation_distance_3d;
+    iot_data->deformation_horizontal = (double)landslide_data->deformation_horizontal;
+    iot_data->deformation_vertical = (double)landslide_data->deformation_vertical;
+    iot_data->deformation_velocity = (double)landslide_data->deformation_velocity;
+    iot_data->deformation_risk_level = landslide_data->deformation_risk_level;
+    iot_data->deformation_type = landslide_data->deformation_type;
+    iot_data->deformation_confidence = (double)landslide_data->deformation_confidence;
+    iot_data->baseline_established = landslide_data->baseline_established;
+
     // 振动传感器数据（decimal类型）
     // 振动强度基于陀螺仪数据计算，已经过滤波和校准处理
     // 数值范围：0-200+ (°/s的幅值)，正常情况下 <10，异常时 >20
@@ -1662,6 +1680,16 @@ void send_msg_to_mqtt(e_iot_data *iot_data)
     cJSON_AddNumberToObject(props, "latitude", iot_data->latitude);            // decimal - 纬度
     cJSON_AddNumberToObject(props, "longitude", iot_data->longitude);          // decimal - 经度
 
+    // GPS形变分析数据
+    cJSON_AddNumberToObject(props, "deformation_distance_3d", iot_data->deformation_distance_3d);     // decimal - 3D总位移(米)
+    cJSON_AddNumberToObject(props, "deformation_horizontal", iot_data->deformation_horizontal);       // decimal - 水平位移(米)
+    cJSON_AddNumberToObject(props, "deformation_vertical", iot_data->deformation_vertical);           // decimal - 垂直位移(米)
+    cJSON_AddNumberToObject(props, "deformation_velocity", iot_data->deformation_velocity);           // decimal - 形变速度(米/小时)
+    cJSON_AddNumberToObject(props, "deformation_risk_level", iot_data->deformation_risk_level);       // int - 形变风险等级(0-4)
+    cJSON_AddNumberToObject(props, "deformation_type", iot_data->deformation_type);                   // int - 形变类型(0-4)
+    cJSON_AddNumberToObject(props, "deformation_confidence", iot_data->deformation_confidence);       // decimal - 置信度(0.0-1.0)
+    cJSON_AddBoolToObject(props, "baseline_established", iot_data->baseline_established);             // boolean - 基准是否建立
+
     cJSON_AddItemToObject(service, "properties", props);
     cJSON_AddItemToArray(services, service);
 
@@ -1725,11 +1753,23 @@ void IoTCloud_ProcessCommand(const char *command_name, const char *payload)
 
             if (cJSON_IsBool(enable)) {
                 bool motor_enabled = cJSON_IsTrue(enable);
-                int motor_speed = cJSON_IsNumber(speed) ? speed->valueint : 50;
-                int motor_direction = cJSON_IsNumber(direction) ? direction->valueint : 1;
-                int motor_duration = cJSON_IsNumber(duration) ? duration->valueint : 0;
 
-                IoTCloud_HandleMotorCommand(motor_enabled, motor_speed, motor_direction, motor_duration);
+                // 对于停止命令，只需要enable参数
+                if (!motor_enabled) {
+                    printf("*** STOPPING MOTOR (ProcessCommand) ***\n");
+                    printf("Raw parameters: enable=false (stop command)\n");
+                    IoTCloud_HandleMotorCommand(false, 0, 0, 0);
+                } else {
+                    // 对于启动命令，解析所有参数
+                    int motor_speed = cJSON_IsNumber(speed) ? speed->valueint : 50;
+                    int motor_direction = cJSON_IsNumber(direction) ? direction->valueint : 1;
+                    int motor_duration = cJSON_IsNumber(duration) ? duration->valueint : 0;
+
+                    printf("*** STARTING MOTOR (ProcessCommand) ***\n");
+                    printf("Raw parameters: enable=true, speed=%d, direction=%d, duration=%d\n",
+                           motor_speed, motor_direction, motor_duration);
+                    IoTCloud_HandleMotorCommand(motor_enabled, motor_speed, motor_direction, motor_duration);
+                }
             }
             cJSON_Delete(root);
         }
@@ -2081,41 +2121,49 @@ void set_motor_state(cJSON *root)
 {
     printf("=== MOTOR CONTROL COMMAND ===\n");
 
+    // 打印完整的JSON内容用于调试
+    char *json_string = cJSON_Print(root);
+    if (json_string) {
+        printf("Full JSON received: %s\n", json_string);
+        free(json_string);
+    }
+
     cJSON *paras = cJSON_GetObjectItem(root, "paras");
     if (paras != NULL) {
+        // 打印paras内容
+        char *paras_string = cJSON_Print(paras);
+        if (paras_string) {
+            printf("Paras content: %s\n", paras_string);
+            free(paras_string);
+        }
         cJSON *enable = cJSON_GetObjectItem(paras, "enable");
         cJSON *speed = cJSON_GetObjectItem(paras, "speed");
         cJSON *direction = cJSON_GetObjectItem(paras, "direction");
         cJSON *duration = cJSON_GetObjectItem(paras, "duration");
 
+        // 调试：检查每个参数的存在性和类型
+        printf("Parameter check:\n");
+        printf("  enable: %s (type: %d)\n", enable ? "exists" : "NULL", enable ? enable->type : -1);
+        printf("  speed: %s (type: %d)\n", speed ? "exists" : "NULL", speed ? speed->type : -1);
+        printf("  direction: %s (type: %d)\n", direction ? "exists" : "NULL", direction ? direction->type : -1);
+        printf("  duration: %s (type: %d)\n", duration ? "exists" : "NULL", duration ? duration->type : -1);
+
         if (cJSON_IsBool(enable)) {
+            printf("Enable parameter is boolean, value: %s\n", cJSON_IsTrue(enable) ? "true" : "false");
             bool motor_enabled = cJSON_IsTrue(enable);
-            int motor_speed = cJSON_IsNumber(speed) ? speed->valueint : 50;
-            int motor_direction = cJSON_IsNumber(direction) ? direction->valueint : 1;
-            int motor_duration = cJSON_IsNumber(duration) ? duration->valueint : 0;
 
-            printf("Raw parameters: enable=%s, speed=%d, direction=%d, duration=%d\n",
-                   motor_enabled ? "true" : "false", motor_speed, motor_direction, motor_duration);
-
-            // 参数验证
-            if (motor_speed < 0) motor_speed = 0;
-            if (motor_speed > 100) motor_speed = 100;
-            if (motor_direction < 0 || motor_direction > 2) motor_direction = 1;
-            if (motor_duration < 0) motor_duration = 0;
-
-            // 更新全局变量
-            g_cloud_motor_enabled = motor_enabled;
-            g_cloud_motor_speed = motor_speed;
-            g_cloud_motor_direction = (MotorDirection)motor_direction;
-            g_cloud_motor_duration = motor_duration;
-
-            printf("Final parameters: enable=%s, speed=%d%%, direction=%d, duration=%ds\n",
-                   motor_enabled ? "ON" : "OFF", motor_speed, motor_direction, motor_duration);
-
-            // 特别处理停止命令
+            // 对于停止命令，只需要enable参数
             if (!motor_enabled) {
                 g_motor_stop_commands++;
                 printf("*** STOPPING MOTOR *** (Stop command #%d)\n", g_motor_stop_commands);
+                printf("Raw parameters: enable=false (stop command)\n");
+
+                // 更新全局变量为停止状态
+                g_cloud_motor_enabled = false;
+                g_cloud_motor_speed = 0;
+                g_cloud_motor_direction = MOTOR_DIRECTION_STOP;
+                g_cloud_motor_duration = 0;
+
                 printf("Calling Motor_Off() directly...\n");
                 Motor_Off();  // 直接调用停止函数
                 printf("Motor_Off() called successfully\n");
@@ -2126,14 +2174,44 @@ void set_motor_state(cJSON *root)
                 Motor_Off();
                 printf("Motor stop confirmed\n");
             } else {
+                // 对于启动命令，需要解析所有参数
+                int motor_speed = cJSON_IsNumber(speed) ? speed->valueint : 50;
+                int motor_direction = cJSON_IsNumber(direction) ? direction->valueint : 1;
+                int motor_duration = cJSON_IsNumber(duration) ? duration->valueint : 0;
+
+                printf("Raw parameters: enable=true, speed=%d, direction=%d, duration=%d\n",
+                       motor_speed, motor_direction, motor_duration);
+
+                // 参数验证
+                if (motor_speed < 0) motor_speed = 0;
+                if (motor_speed > 100) motor_speed = 100;
+                if (motor_direction < 0 || motor_direction > 2) motor_direction = 1;
+                if (motor_duration < 0) motor_duration = 0;
+
+                // 更新全局变量
+                g_cloud_motor_enabled = motor_enabled;
+                g_cloud_motor_speed = motor_speed;
+                g_cloud_motor_direction = (MotorDirection)motor_direction;
+                g_cloud_motor_duration = motor_duration;
+
+                printf("Final parameters: enable=ON, speed=%d%%, direction=%d, duration=%ds\n",
+                       motor_speed, motor_direction, motor_duration);
+
                 g_motor_start_commands++;
                 printf("*** STARTING MOTOR *** (Start command #%d)\n", g_motor_start_commands);
                 // 调用实际的马达控制函数
                 IoTCloud_HandleMotorCommand(motor_enabled, motor_speed, motor_direction, motor_duration);
             }
         } else {
-            printf("ERROR: enable parameter is not boolean\n");
+            printf("ERROR: enable parameter is not boolean or missing\n");
+            if (enable) {
+                printf("Enable parameter type: %d (expected: %d for boolean)\n", enable->type, cJSON_True);
+            } else {
+                printf("Enable parameter is NULL\n");
+            }
         }
+    } else {
+        printf("ERROR: 'paras' object not found in JSON\n");
     }
 }
 
@@ -2203,20 +2281,48 @@ void set_rgb_state(cJSON *root)
         cJSON *green = cJSON_GetObjectItem(paras, "green");
         cJSON *blue = cJSON_GetObjectItem(paras, "blue");
 
-        if (cJSON_IsBool(enable) && cJSON_IsNumber(red) &&
-            cJSON_IsNumber(green) && cJSON_IsNumber(blue)) {
+        if (cJSON_IsBool(enable)) {
+            bool rgb_enabled = cJSON_IsTrue(enable);
 
-            g_cloud_rgb_enabled = cJSON_IsTrue(enable);
-            g_cloud_rgb_red = red->valueint;
-            g_cloud_rgb_green = green->valueint;
-            g_cloud_rgb_blue = blue->valueint;
+            // 对于停止命令，只需要enable参数
+            if (!rgb_enabled) {
+                printf("*** STOPPING RGB LED ***\n");
+                printf("Raw parameters: enable=false (stop command)\n");
 
-            printf("RGB: %s (R:%d, G:%d, B:%d)\n",
-                   g_cloud_rgb_enabled ? "ON" : "OFF",
-                   g_cloud_rgb_red, g_cloud_rgb_green, g_cloud_rgb_blue);
+                // 更新全局变量为停止状态
+                g_cloud_rgb_enabled = false;
+                g_cloud_rgb_red = 0;
+                g_cloud_rgb_green = 0;
+                g_cloud_rgb_blue = 0;
 
-            IoTCloud_HandleRGBCommand(g_cloud_rgb_enabled,
-                                    g_cloud_rgb_red, g_cloud_rgb_green, g_cloud_rgb_blue);
+                printf("RGB: OFF (R:0, G:0, B:0)\n");
+                IoTCloud_HandleRGBCommand(false, 0, 0, 0);
+            } else {
+                // 对于启动命令，需要解析颜色参数
+                int rgb_red = cJSON_IsNumber(red) ? red->valueint : 255;
+                int rgb_green = cJSON_IsNumber(green) ? green->valueint : 255;
+                int rgb_blue = cJSON_IsNumber(blue) ? blue->valueint : 255;
+
+                // 参数验证
+                if (rgb_red < 0) rgb_red = 0;
+                if (rgb_red > 255) rgb_red = 255;
+                if (rgb_green < 0) rgb_green = 0;
+                if (rgb_green > 255) rgb_green = 255;
+                if (rgb_blue < 0) rgb_blue = 0;
+                if (rgb_blue > 255) rgb_blue = 255;
+
+                // 更新全局变量
+                g_cloud_rgb_enabled = rgb_enabled;
+                g_cloud_rgb_red = rgb_red;
+                g_cloud_rgb_green = rgb_green;
+                g_cloud_rgb_blue = rgb_blue;
+
+                printf("*** STARTING RGB LED ***\n");
+                printf("RGB: ON (R:%d, G:%d, B:%d)\n", rgb_red, rgb_green, rgb_blue);
+                IoTCloud_HandleRGBCommand(rgb_enabled, rgb_red, rgb_green, rgb_blue);
+            }
+        } else {
+            printf("ERROR: enable parameter is not boolean\n");
         }
     }
 }

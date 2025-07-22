@@ -3,6 +3,7 @@ const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
 const DataProcessor = require('./data-processor');
 const DeviceMapper = require('./device-mapper');
+const HuaweiIoTService = require('./huawei-iot-service');
 
 const app = express();
 const PORT = 5100;
@@ -26,6 +27,16 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // 初始化设备映射器和数据处理器
 const deviceMapper = new DeviceMapper();
 const dataProcessor = new DataProcessor();
+
+// 初始化华为云IoT服务
+const huaweiIoTService = new HuaweiIoTService({
+  // 这些配置可以通过环境变量设置，或者在这里直接配置
+  // projectId: 'your-project-id',
+  // domainName: 'your-domain-name',
+  // iamUsername: 'your-iam-username',
+  // iamPassword: 'your-iam-password',
+  // deviceId: '6815a14f9314d118511807c6_rk2206'
+});
 
 
 
@@ -51,7 +62,11 @@ app.get('/info', (req, res) => {
       iot_data: 'POST /iot/huawei',
       device_mappings: 'GET /devices/mappings',
       device_list: 'GET /devices/list',
-      device_info: 'GET /devices/info/:simpleId'
+      device_info: 'GET /devices/info/:simpleId',
+      huawei_config: 'GET /huawei/config',
+      device_shadow: 'GET /huawei/devices/:deviceId/shadow',
+      send_command: 'POST /huawei/devices/:deviceId/commands',
+      command_templates: 'GET /huawei/command-templates'
     }
   });
 });
@@ -389,6 +404,201 @@ function formatEventTime(eventTime) {
     return new Date().toISOString();
   }
 }
+
+// ==================== 华为云IoT相关接口 ====================
+
+// 华为云IoT配置检查接口
+app.get('/huawei/config', (req, res) => {
+  try {
+    const configCheck = huaweiIoTService.checkConfig();
+    res.json({
+      success: true,
+      data: configCheck
+    });
+  } catch (error) {
+    console.error('❌ 配置检查失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '配置检查失败',
+      message: error.message
+    });
+  }
+});
+
+// 获取设备影子信息
+app.get('/huawei/devices/:deviceId/shadow', async (req, res) => {
+  try {
+    const { deviceId } = req.params;
+    console.log(`🔍 获取设备影子: ${deviceId}`);
+
+    const shadowData = await huaweiIoTService.getDeviceShadow(deviceId);
+
+    res.json({
+      success: true,
+      data: shadowData
+    });
+  } catch (error) {
+    console.error('❌ 获取设备影子失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '获取设备影子失败',
+      message: error.message
+    });
+  }
+});
+
+// 向设备下发命令
+app.post('/huawei/devices/:deviceId/commands', async (req, res) => {
+  try {
+    const { deviceId } = req.params;
+    const commandData = req.body;
+
+    console.log(`📤 向设备下发命令: ${deviceId}`);
+    console.log('命令数据:', JSON.stringify(commandData, null, 2));
+
+    // 验证命令数据格式
+    if (!commandData.service_id || !commandData.command_name) {
+      return res.status(400).json({
+        success: false,
+        error: '命令数据格式错误',
+        message: '缺少必要字段: service_id 或 command_name'
+      });
+    }
+
+    const result = await huaweiIoTService.sendCommand(commandData, deviceId);
+
+    res.json({
+      success: true,
+      data: result,
+      message: '命令下发成功'
+    });
+  } catch (error) {
+    console.error('❌ 命令下发失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '命令下发失败',
+      message: error.message
+    });
+  }
+});
+
+// 获取命令模板
+app.get('/huawei/command-templates', (req, res) => {
+  try {
+    const templates = huaweiIoTService.getCommandTemplates();
+
+    // 转换为更友好的格式
+    const templateList = Object.keys(templates).map(key => ({
+      name: key,
+      description: getTemplateDescription(key),
+      example: templates[key]()
+    }));
+
+    res.json({
+      success: true,
+      data: templateList
+    });
+  } catch (error) {
+    console.error('❌ 获取命令模板失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '获取命令模板失败',
+      message: error.message
+    });
+  }
+});
+
+// 快捷命令接口 - LED控制
+app.post('/huawei/devices/:deviceId/led', async (req, res) => {
+  try {
+    const { deviceId } = req.params;
+    const { action } = req.body; // 'on' 或 'off'
+
+    const templates = huaweiIoTService.getCommandTemplates();
+    const commandData = templates.ledControl(action === 'on' ? 'ON' : 'OFF');
+
+    const result = await huaweiIoTService.sendCommand(commandData, deviceId);
+
+    res.json({
+      success: true,
+      data: result,
+      message: `LED ${action === 'on' ? '开启' : '关闭'}命令下发成功`
+    });
+  } catch (error) {
+    console.error('❌ LED控制失败:', error);
+    res.status(500).json({
+      success: false,
+      error: 'LED控制失败',
+      message: error.message
+    });
+  }
+});
+
+// 快捷命令接口 - 电机控制
+app.post('/huawei/devices/:deviceId/motor', async (req, res) => {
+  try {
+    const { deviceId } = req.params;
+    const { action } = req.body; // 'on' 或 'off'
+
+    const templates = huaweiIoTService.getCommandTemplates();
+    const commandData = templates.motorControl(action === 'on' ? 'ON' : 'OFF');
+
+    const result = await huaweiIoTService.sendCommand(commandData, deviceId);
+
+    res.json({
+      success: true,
+      data: result,
+      message: `电机 ${action === 'on' ? '开启' : '关闭'}命令下发成功`
+    });
+  } catch (error) {
+    console.error('❌ 电机控制失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '电机控制失败',
+      message: error.message
+    });
+  }
+});
+
+// 快捷命令接口 - 系统重启
+app.post('/huawei/devices/:deviceId/reboot', async (req, res) => {
+  try {
+    const { deviceId } = req.params;
+
+    const templates = huaweiIoTService.getCommandTemplates();
+    const commandData = templates.systemReboot();
+
+    const result = await huaweiIoTService.sendCommand(commandData, deviceId);
+
+    res.json({
+      success: true,
+      data: result,
+      message: '系统重启命令下发成功'
+    });
+  } catch (error) {
+    console.error('❌ 系统重启失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '系统重启失败',
+      message: error.message
+    });
+  }
+});
+
+// 辅助函数：获取模板描述
+function getTemplateDescription(templateName) {
+  const descriptions = {
+    ledControl: 'LED灯控制 - 开启或关闭LED灯',
+    motorControl: '电机控制 - 开启或关闭电机',
+    autoModeControl: '自动模式控制 - 开启或关闭自动模式',
+    systemReboot: '系统重启 - 重启设备系统',
+    setDataInterval: '设置数据采集频率 - 设置传感器数据采集间隔',
+    setAlarmThreshold: '设置报警阈值 - 设置各种传感器的报警阈值'
+  };
+  return descriptions[templateName] || '未知命令';
+}
+
+// ==================== 华为云IoT接口结束 ====================
 
 // 404处理
 app.use((req, res) => {
