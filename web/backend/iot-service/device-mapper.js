@@ -27,7 +27,7 @@ class DeviceMapper {
         .eq('status', 'active');
 
       if (error) {
-        console.error('❌ 初始化设备映射缓存失败:', error);
+        console.error(' 初始化设备映射缓存失败:', error);
         return;
       }
 
@@ -40,9 +40,9 @@ class DeviceMapper {
         this.reverseMappingCache.set(mapping.simple_id, mapping);
       });
 
-      console.log(`✅ 设备映射缓存初始化完成，加载了 ${data.length} 个设备映射`);
+      console.log(` 设备映射缓存初始化完成，加载了 ${data.length} 个设备映射`);
     } catch (error) {
-      console.error('❌ 初始化设备映射缓存异常:', error);
+      console.error(' 初始化设备映射缓存异常:', error);
     }
   }
 
@@ -65,7 +65,7 @@ class DeviceMapper {
         .single();
 
       if (error && error.code !== 'PGRST116') { // PGRST116 是没有找到记录的错误
-        console.error('❌ 查询设备映射失败:', error);
+        console.error(' 查询设备映射失败:', error);
         return actualDeviceId; // 返回原始ID作为备用
       }
 
@@ -83,7 +83,7 @@ class DeviceMapper {
       return await this.createNewMapping(actualDeviceId, deviceInfo);
 
     } catch (error) {
-      console.error('❌ 获取简洁设备ID失败:', error);
+      console.error(' 获取简洁设备ID失败:', error);
       return actualDeviceId; // 返回原始ID作为备用
     }
   }
@@ -105,12 +105,12 @@ class DeviceMapper {
       });
 
       if (error) {
-        console.error('❌ 自动注册设备失败:', error);
+        console.error(' 自动注册设备失败:', error);
         return actualDeviceId;
       }
 
       const simpleId = data;
-      console.log(`✅ 设备 ${actualDeviceId} 映射为 ${simpleId}`);
+      console.log(` 设备 ${actualDeviceId} 映射为 ${simpleId}`);
 
       // 更新缓存
       await this.refreshCacheForDevice(actualDeviceId);
@@ -118,7 +118,7 @@ class DeviceMapper {
       return simpleId;
 
     } catch (error) {
-      console.error('❌ 创建设备映射失败:', error);
+      console.error(' 创建设备映射失败:', error);
       return actualDeviceId;
     }
   }
@@ -136,13 +136,13 @@ class DeviceMapper {
         .single();
 
       if (error) {
-        console.error('❌ 获取完整映射信息失败:', error);
+        console.error(' 获取完整映射信息失败:', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('❌ 获取完整映射信息异常:', error);
+      console.error(' 获取完整映射信息异常:', error);
       return null;
     }
   }
@@ -222,13 +222,13 @@ class DeviceMapper {
         .order('simple_id');
 
       if (error) {
-        console.error('❌ 获取所有设备映射失败:', error);
+        console.error(' 获取所有设备映射失败:', error);
         return [];
       }
 
       return data;
     } catch (error) {
-      console.error('❌ 获取所有设备映射异常:', error);
+      console.error(' 获取所有设备映射异常:', error);
       return [];
     }
   }
@@ -244,7 +244,7 @@ class DeviceMapper {
         .eq('simple_id', simpleId);
 
       if (error) {
-        console.error('❌ 更新设备信息失败:', error);
+        console.error(' 更新设备信息失败:', error);
         return false;
       }
 
@@ -254,10 +254,10 @@ class DeviceMapper {
         await this.refreshCacheForDevice(mapping.actual_device_id);
       }
 
-      console.log(`✅ 设备 ${simpleId} 信息更新成功`);
+      console.log(` 设备 ${simpleId} 信息更新成功`);
       return true;
     } catch (error) {
-      console.error('❌ 更新设备信息异常:', error);
+      console.error(' 更新设备信息异常:', error);
       return false;
     }
   }

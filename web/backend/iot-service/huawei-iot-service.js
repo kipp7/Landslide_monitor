@@ -106,7 +106,7 @@ class HuaweiIoTService {
         throw new Error(`认证失败，状态码: ${response.status}`);
       }
     } catch (error) {
-      console.error('❌ 获取IAM token失败:', error.message);
+      console.error('获取IAM token失败:', error.message);
       if (error.response) {
         console.error('响应状态:', error.response.status);
         console.error('响应数据:', error.response.data);
@@ -186,7 +186,7 @@ class HuaweiIoTService {
 
       return this.config.projectId;
     } catch (error) {
-      console.error('❌ 获取项目ID失败:', error.message);
+      console.error('获取项目ID失败:', error.message);
       throw error;
     }
   }
@@ -219,7 +219,7 @@ class HuaweiIoTService {
         throw new Error(`获取设备影子失败，状态码: ${response.status}`);
       }
     } catch (error) {
-      console.error('❌ 获取设备影子失败:', error.message);
+      console.error('获取设备影子失败:', error.message);
       if (error.response) {
         console.error('响应状态:', error.response.status);
         console.error('响应数据:', error.response.data);
@@ -262,7 +262,7 @@ class HuaweiIoTService {
         throw new Error(`命令下发失败，状态码: ${response.status}`);
       }
     } catch (error) {
-      console.error('❌ 命令下发失败:', error.message);
+      console.error('命令下发失败:', error.message);
       if (error.response) {
         console.error('响应状态:', error.response.status);
         console.error('响应数据:', error.response.data);

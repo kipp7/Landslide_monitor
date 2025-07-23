@@ -38,6 +38,36 @@ import {
 import HoverSidebar from '../components/HoverSidebar';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
+import { getApiUrl, API_CONFIG } from '../../lib/config';
+import { io, Socket } from 'socket.io-client';
+
+// 客户端时间组件，避免SSR水合错误
+const CurrentTime = () => {
+  const [currentTime, setCurrentTime] = useState('');
+
+  useEffect(() => {
+    const updateTime = () => {
+      setCurrentTime(new Date().toLocaleString('zh-CN'));
+    };
+
+    // 初始设置时间
+    updateTime();
+
+    // 每秒更新时间
+    const interval = setInterval(updateTime, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // 在客户端渲染前显示占位符
+  if (!currentTime) {
+    return <span>--:--:--</span>;
+  }
+
+  return <span>{currentTime}</span>;
+};
+
+
 
 // 使用大屏的地图组件
 const MapContainer = dynamic(() => import('../../app/components/MapContainer'), {
@@ -78,7 +108,16 @@ export default function DeviceManagementPage() {
   const [currentDevice, setCurrentDevice] = useState<DeviceInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [realTimeData, setRealTimeData] = useState<any>(null);
+  const [lastUpdateTime, setLastUpdateTime] = useState<string>('');
+  const [isRealTimeActive, setIsRealTimeActive] = useState(true);
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
   const [form] = Form.useForm();
+
+  // 设备控制相关状态
+  const [controlLoading, setControlLoading] = useState(false);
+  const [commandModalVisible, setCommandModalVisible] = useState(false);
+  const [commandForm] = Form.useForm();
 
   // 真实设备数据 - 基于实际的device_1
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo>({
@@ -172,51 +211,131 @@ export default function DeviceManagementPage() {
     return Math.max(0, Math.min(100, Math.round(batteryLevel)));
   };
 
-  // 获取实时数据 - 直接从Supabase获取最新数据 (优化性能)
-  const fetchRealTimeData = useCallback(async () => {
+  // 获取实时数据 - 使用后端的完整设备管理API
+  const fetchRealTimeData = useCallback(async (showMessage = false) => {
     try {
-      setLoading(true);
+      if (showMessage) setLoading(true);
 
-      const response = await fetch(`/api/device-management?device_id=device_1`);
+      // 调用后端的设备管理API（结合华为云IoT + Supabase数据）
+      const managementUrl = getApiUrl(`/devices/device_1/management`);
+
+      const response = await fetch(managementUrl);
       const result = await response.json();
 
-      console.log('API响应:', result);
-
       if (result.success) {
-        console.log('更新设备信息:', result.data);
+        console.log('实时数据更新:', {
+          status: result.data.status,
+          temperature: result.data.temperature,
+          humidity: result.data.humidity,
+          health_score: result.data.health_score,
+          battery_level: result.data.battery_level,
+          timestamp: result.data.timestamp
+        });
+
         setDeviceInfo(result.data);
+        setLastUpdateTime(new Date().toLocaleTimeString());
 
         // 更新GPS形变分析数据
         if (result.deformation_data) {
-          console.log('更新GPS形变分析数据:', result.deformation_data);
           setDeformationData(result.deformation_data);
         }
 
-        message.success('数据刷新成功');
+        if (showMessage) {
+          message.success('数据刷新成功');
+        }
       } else {
         throw new Error(result.error || '获取设备信息失败');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('获取设备信息失败:', error);
-      message.error('数据刷新失败');
+      if (showMessage) {
+        message.error('数据刷新失败');
+      }
+      // 设置为离线状态
+      setDeviceInfo(prev => ({ ...prev, status: 'offline' }));
     } finally {
-      setLoading(false);
+      if (showMessage) setLoading(false);
     }
   }, []);
 
 
 
-  // 页面初始化和定时刷新
+  // WebSocket连接管理
   useEffect(() => {
-    fetchRealTimeData();
+    if (typeof window === 'undefined') return; // 确保在客户端运行
 
-    // 每30秒刷新一次数据
-    const interval = setInterval(() => {
-      fetchRealTimeData();
-    }, 30000);
+    // 初始加载数据
+    fetchRealTimeData(true);
 
-    return () => clearInterval(interval);
-  }, [fetchRealTimeData]);
+    // 建立WebSocket连接
+    // 根据当前域名构建WebSocket URL
+    const hostname = window.location.hostname;
+    const socketUrl = hostname === 'ylsf.chat'
+      ? 'http://ylsf.chat:5100'  // 直接连接到后端服务端口
+      : 'http://localhost:5100'; // 本地开发环境
+
+    console.log('连接WebSocket:', socketUrl);
+
+    setConnectionStatus('connecting');
+    const newSocket = io(socketUrl, {
+      path: '/socket.io', // 使用默认路径
+      transports: ['websocket', 'polling'],
+      timeout: 10000,
+      forceNew: true,
+    });
+
+    // 连接成功
+    newSocket.on('connect', () => {
+      console.log('WebSocket连接成功');
+      setConnectionStatus('connected');
+      // 订阅设备实时数据
+      newSocket.emit('subscribe_device', 'device_1');
+    });
+
+    // 接收实时设备数据
+    newSocket.on('device_data', (data) => {
+      console.log('收到实时设备数据:', data);
+      setDeviceInfo(data);
+      setLastUpdateTime(new Date().toLocaleTimeString());
+    });
+
+    // 连接断开
+    newSocket.on('disconnect', () => {
+      console.log('WebSocket连接断开');
+      setConnectionStatus('disconnected');
+    });
+
+    // 连接错误
+    newSocket.on('connect_error', (error) => {
+      console.error('WebSocket连接错误:', error);
+      setConnectionStatus('disconnected');
+    });
+
+    setSocket(newSocket);
+
+    // 清理函数
+    return () => {
+      if (newSocket) {
+        newSocket.emit('unsubscribe_device', 'device_1');
+        newSocket.disconnect();
+      }
+    };
+  }, []);
+
+  // 实时状态切换
+  const toggleRealTime = useCallback(() => {
+    if (socket) {
+      if (isRealTimeActive) {
+        // 暂停：取消订阅
+        socket.emit('unsubscribe_device', 'device_1');
+        setIsRealTimeActive(false);
+      } else {
+        // 启动：重新订阅
+        socket.emit('subscribe_device', 'device_1');
+        setIsRealTimeActive(true);
+      }
+    }
+  }, [socket, isRealTimeActive]);
 
   // 数据导出处理
   const handleExportData = useCallback(async (exportType: 'today' | 'history') => {
@@ -364,6 +483,161 @@ ${report.ai_analysis.recommendations.map((rec: string) => `• ${rec}`).join('\n
     }
   }, [deviceInfo.device_id]);
 
+  // ==================== 设备控制相关函数 ====================
+
+  // 发送设备命令
+  const sendDeviceCommand = useCallback(async (commandData: any) => {
+    try {
+      setControlLoading(true);
+
+      const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.DEVICE_COMMANDS(deviceInfo.real_name)), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(commandData),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        message.success('命令下发成功');
+        console.log('命令执行结果:', result.data);
+        return result.data;
+      } else {
+        throw new Error(result.message || '命令下发失败');
+      }
+    } catch (error: any) {
+      console.error('命令下发失败:', error);
+      message.error(`命令下发失败: ${error.message || error}`);
+      throw error;
+    } finally {
+      setControlLoading(false);
+    }
+  }, [deviceInfo.real_name]);
+
+  // 电机控制
+  const handleMotorControl = useCallback(async (enable: boolean, speed = 100, direction = 1, duration = 5000) => {
+    try {
+      setControlLoading(true);
+
+      const apiUrl = getApiUrl(API_CONFIG.ENDPOINTS.DEVICE_MOTOR(deviceInfo.real_name));
+      console.log('电机控制API调用:', apiUrl);
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ enable, speed, direction, duration }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        message.success(`电机 ${enable ? '启动' : '停止'}成功`);
+        console.log('电机控制结果:', result.data);
+      } else {
+        throw new Error(result.message || '电机控制失败');
+      }
+    } catch (error: any) {
+      console.error('电机控制失败:', error);
+      message.error(`电机控制失败: ${error.message || error}`);
+    } finally {
+      setControlLoading(false);
+    }
+  }, [deviceInfo.real_name]);
+
+  // 蜂鸣器控制
+  const handleBuzzerControl = useCallback(async (enable: boolean, frequency = 2000, duration = 3, pattern = 2) => {
+    try {
+      setControlLoading(true);
+
+      const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.DEVICE_BUZZER(deviceInfo.real_name)), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ enable, frequency, duration, pattern }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        message.success(`蜂鸣器 ${enable ? '开启' : '关闭'}成功`);
+        console.log('蜂鸣器控制结果:', result.data);
+      } else {
+        throw new Error(result.message || '蜂鸣器控制失败');
+      }
+    } catch (error: any) {
+      console.error('蜂鸣器控制失败:', error);
+      message.error(`蜂鸣器控制失败: ${error.message || error}`);
+    } finally {
+      setControlLoading(false);
+    }
+  }, [deviceInfo.real_name]);
+
+  // 系统重启
+  const handleSystemReboot = useCallback(async () => {
+    try {
+      Modal.confirm({
+        title: '确认重启设备',
+        content: '确定要重启设备吗？重启过程中设备将暂时离线。',
+        okText: '确认重启',
+        cancelText: '取消',
+        okType: 'danger',
+        className: 'dark-modal',
+        onOk: async () => {
+          try {
+            setControlLoading(true);
+
+            const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.DEVICE_REBOOT(deviceInfo.real_name)), {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+              message.success('设备重启命令已发送');
+              console.log('重启命令结果:', result.data);
+            } else {
+              throw new Error(result.message || '重启命令发送失败');
+            }
+          } catch (error: any) {
+            console.error('设备重启失败:', error);
+            message.error(`设备重启失败: ${error.message || error}`);
+          } finally {
+            setControlLoading(false);
+          }
+        }
+      });
+    } catch (error) {
+      console.error('设备重启操作失败:', error);
+    }
+  }, [deviceInfo.real_name]);
+
+  // 自定义命令处理
+  const handleCustomCommand = useCallback(async (values: any) => {
+    try {
+      const commandData = {
+        service_id: values.service_id,
+        command_name: values.command_name,
+        paras: JSON.parse(values.paras || '{}')
+      };
+
+      await sendDeviceCommand(commandData);
+      setCommandModalVisible(false);
+      commandForm.resetFields();
+    } catch (error) {
+      console.error('自定义命令执行失败:', error);
+    }
+  }, [sendDeviceCommand, commandForm]);
+
+  // ==================== 设备控制函数结束 ====================
+
   // 设备健康度计算 (优化性能)
   const getHealthColor = useMemo(() => (score: number) => {
     if (score >= 90) return '#00ff88';
@@ -466,9 +740,39 @@ ${report.ai_analysis.recommendations.map((rec: string) => `• ${rec}`).join('\n
                 </span>
               </div>
 
-              <div className="text-sm text-slate-300 font-mono">
-                {new Date().toLocaleString('zh-CN')}
+              {/* WebSocket实时连接状态指示器 */}
+              <div className="flex items-center space-x-2 bg-blue-700/50 px-3 py-1 rounded-full">
+                <div className={`w-2 h-2 rounded-full ${
+                  connectionStatus === 'connected' && isRealTimeActive ? 'bg-green-400 animate-pulse' :
+                  connectionStatus === 'connecting' ? 'bg-yellow-400 animate-pulse' :
+                  connectionStatus === 'connected' && !isRealTimeActive ? 'bg-blue-400' :
+                  'bg-red-400'
+                }`}></div>
+                <span className="text-sm text-slate-200">
+                  {connectionStatus === 'connected' && isRealTimeActive ? 'WebSocket实时' :
+                   connectionStatus === 'connecting' ? '连接中...' :
+                   connectionStatus === 'connected' && !isRealTimeActive ? '已暂停' :
+                   'WebSocket断开'}
+                </span>
+                {connectionStatus === 'connected' && (
+                  <button
+                    onClick={toggleRealTime}
+                    className="text-xs text-blue-300 hover:text-blue-200 ml-1"
+                  >
+                    {isRealTimeActive ? '暂停' : '启动'}
+                  </button>
+                )}
               </div>
+
+              <div className="text-sm text-slate-300 font-mono">
+                <CurrentTime />
+              </div>
+
+              {lastUpdateTime && (
+                <div className="text-xs text-slate-400">
+                  最后更新: {lastUpdateTime}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -494,7 +798,7 @@ ${report.ai_analysis.recommendations.map((rec: string) => `• ${rec}`).join('\n
               </div>
               <div className="flex space-x-3">
                 <button
-                  onClick={fetchRealTimeData}
+                  onClick={() => fetchRealTimeData(true)}
                   disabled={loading}
                   className="px-4 py-2 bg-slate-700 text-slate-200 text-sm border border-slate-600 rounded-lg hover:bg-slate-600 disabled:opacity-50 transition-colors"
                 >
@@ -677,7 +981,7 @@ ${report.ai_analysis.recommendations.map((rec: string) => `• ${rec}`).join('\n
                     <div className="text-sm text-slate-400 mb-3">快速操作</div>
                     <div className="space-y-2">
                       <button
-                        onClick={fetchRealTimeData}
+                        onClick={() => fetchRealTimeData(true)}
                         disabled={loading}
                         className="w-full px-3 py-2 text-xs bg-cyan-500/20 text-cyan-300 border border-cyan-400 rounded hover:bg-cyan-500/30 disabled:opacity-50 transition-colors"
                       >
@@ -694,6 +998,66 @@ ${report.ai_analysis.recommendations.map((rec: string) => `• ${rec}`).join('\n
                         className="w-full px-3 py-2 text-xs bg-slate-600 text-slate-300 border border-slate-500 rounded hover:bg-slate-500 transition-colors"
                       >
                         设备配置
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 设备控制 */}
+                  <div className="pt-3 border-t border-slate-600">
+                    <div className="text-sm text-slate-400 mb-3">设备控制</div>
+                    <div className="space-y-2">
+                      {/* 电机控制按钮 */}
+                      <div className="flex space-x-1">
+                        <button
+                          onClick={() => handleMotorControl(true, 100, 1, 5)}
+                          disabled={controlLoading}
+                          className="flex-1 px-2 py-2 text-xs bg-blue-500/20 text-blue-300 border border-blue-400 rounded hover:bg-blue-500/30 disabled:opacity-50 transition-colors"
+                        >
+                          电机启动
+                        </button>
+                        <button
+                          onClick={() => handleMotorControl(false, 0, 1, 0)}
+                          disabled={controlLoading}
+                          className="flex-1 px-2 py-2 text-xs bg-orange-500/20 text-orange-300 border border-orange-400 rounded hover:bg-orange-500/30 disabled:opacity-50 transition-colors"
+                        >
+                          电机停止
+                        </button>
+                      </div>
+
+                      {/* 蜂鸣器控制按钮 */}
+                      <div className="flex space-x-1">
+                        <button
+                          onClick={() => handleBuzzerControl(true, 2000, 3, 2)}
+                          disabled={controlLoading}
+                          className="flex-1 px-2 py-2 text-xs bg-yellow-500/20 text-yellow-300 border border-yellow-400 rounded hover:bg-yellow-500/30 disabled:opacity-50 transition-colors"
+                        >
+                          蜂鸣器开
+                        </button>
+                        <button
+                          onClick={() => handleBuzzerControl(false)}
+                          disabled={controlLoading}
+                          className="flex-1 px-2 py-2 text-xs bg-red-500/20 text-red-300 border border-red-400 rounded hover:bg-red-500/30 disabled:opacity-50 transition-colors"
+                        >
+                          蜂鸣器关
+                        </button>
+                      </div>
+
+                      {/* 系统控制按钮 */}
+                      <button
+                        onClick={handleSystemReboot}
+                        disabled={controlLoading}
+                        className="w-full px-3 py-2 text-xs bg-yellow-500/20 text-yellow-300 border border-yellow-400 rounded hover:bg-yellow-500/30 disabled:opacity-50 transition-colors"
+                      >
+                        {controlLoading ? '执行中...' : '系统重启'}
+                      </button>
+
+                      {/* 自定义命令按钮 */}
+                      <button
+                        onClick={() => setCommandModalVisible(true)}
+                        disabled={controlLoading}
+                        className="w-full px-3 py-2 text-xs bg-purple-500/20 text-purple-300 border border-purple-400 rounded hover:bg-purple-500/30 disabled:opacity-50 transition-colors"
+                      >
+                        自定义命令
                       </button>
                     </div>
                   </div>
@@ -1405,6 +1769,107 @@ ${report.ai_analysis.recommendations.map((rec: string) => `• ${rec}`).join('\n
                   </Form.Item>
                 </Col>
               </Row>
+            </Form>
+          </div>
+        </Modal>
+
+        {/* 自定义命令模态框 */}
+        <Modal
+          title={
+            <div className="flex items-center space-x-2 text-cyan-300">
+              <ThunderboltOutlined className="text-cyan-400" />
+              <span>自定义命令</span>
+            </div>
+          }
+          open={commandModalVisible}
+          onCancel={() => {
+            setCommandModalVisible(false);
+            commandForm.resetFields();
+          }}
+          onOk={() => commandForm.submit()}
+          confirmLoading={controlLoading}
+          width={600}
+          okText="发送命令"
+          cancelText="取消"
+          className="dark-modal"
+          okButtonProps={{
+            className: "bg-purple-500 hover:bg-purple-600 border-purple-500"
+          }}
+          cancelButtonProps={{
+            className: "bg-slate-700 text-slate-300 border-slate-600 hover:bg-slate-600"
+          }}
+        >
+          <div className="bg-slate-800 p-4 rounded-lg">
+            <Form
+              form={commandForm}
+              layout="vertical"
+              onFinish={handleCustomCommand}
+              className="dark-form"
+            >
+              <Form.Item
+                label={<span className="text-slate-300">服务ID</span>}
+                name="service_id"
+                rules={[{ required: true, message: '请输入服务ID' }]}
+              >
+                <Input
+                  placeholder="例如: IntelligentCockpit"
+                  className="bg-slate-700 border-slate-600 text-white"
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={<span className="text-slate-300">命令名称</span>}
+                name="command_name"
+                rules={[{ required: true, message: '请输入命令名称' }]}
+              >
+                <Input
+                  placeholder="例如: light_control"
+                  className="bg-slate-700 border-slate-600 text-white"
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={<span className="text-slate-300">命令参数 (JSON格式)</span>}
+                name="paras"
+                rules={[
+                  { required: true, message: '请输入命令参数' },
+                  {
+                    validator: (_, value) => {
+                      if (!value) return Promise.resolve();
+                      try {
+                        JSON.parse(value);
+                        return Promise.resolve();
+                      } catch {
+                        return Promise.reject(new Error('请输入有效的JSON格式'));
+                      }
+                    }
+                  }
+                ]}
+              >
+                <Input.TextArea
+                  rows={4}
+                  placeholder='例如: {"onoff": "ON"}'
+                  className="bg-slate-700 border-slate-600 text-white"
+                />
+              </Form.Item>
+
+              <div className="bg-slate-700/50 p-3 rounded-lg">
+                <div className="text-xs text-slate-400 mb-2">常用命令示例：</div>
+                <div className="space-y-1 text-xs">
+                  <div className="text-slate-300">
+                    <span className="text-blue-400">电机控制:</span> service_id: &quot;smartHome&quot;, command_name: &quot;control_motor&quot;
+                  </div>
+                  <div className="text-slate-300">
+                    参数: {'{'}&#34;enable&#34;: true, &#34;speed&#34;: 100, &#34;direction&#34;: 1, &#34;duration&#34;: 5000{'}'}
+                  </div>
+                  <div className="text-slate-300">
+                    <span className="text-yellow-400">蜂鸣器控制:</span> service_id: &quot;smartHome&quot;, command_name: &quot;control_buzzer&quot;
+                  </div>
+                  <div className="text-slate-300">
+                    参数: {'{'}&#34;enable&#34;: true, &#34;frequency&#34;: 2000, &#34;duration&#34;: 3000, &#34;pattern&#34;: 2{'}'}
+                  </div>
+                </div>
+              </div>
             </Form>
           </div>
         </Modal>

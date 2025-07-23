@@ -14,9 +14,9 @@ let Server, io;
 try {
   const socketIO = require('socket.io');
   Server = socketIO.Server;
-  console.log('✅ Socket.IO 加载成功');
+  console.log('Socket.IO 加载成功');
 } catch (error) {
-  console.log('❌ Socket.IO 未安装，将使用轮询模式');
+  console.log('Socket.IO 未安装，将使用轮询模式');
   console.log('请运行: npm install socket.io');
   Server = null;
 }
@@ -37,9 +37,9 @@ if (Server) {
       methods: ["GET", "POST"]
     }
   });
-  console.log('✅ WebSocket服务器初始化成功');
+  console.log('WebSocket服务器初始化成功');
 } else {
-  console.log('⚠️  WebSocket服务器未初始化（Socket.IO未安装）');
+  console.log('WebSocket服务器未初始化（Socket.IO未安装）');
 }
 
 const PORT = 5100;
@@ -100,6 +100,79 @@ function calculateBatteryFromUptime(uptime, temperature) {
   }
 
   return Math.max(0, Math.min(100, batteryLevel));
+}
+
+// 辅助函数：转换华为云IoT时间格式
+function parseHuaweiIoTTime(timeString) {
+  try {
+    // 华为云IoT时间格式：20250723T055331Z
+    // 转换为标准ISO格式：2025-07-23T05:53:31Z
+    if (timeString && timeString.match(/^\d{8}T\d{6}Z$/)) {
+      const isoTimeString = timeString.replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z/, '$1-$2-$3T$4:$5:$6Z');
+      const date = new Date(isoTimeString);
+
+      // 验证日期是否有效
+      if (isNaN(date.getTime())) {
+        console.error('时间转换失败:', { original: timeString, converted: isoTimeString });
+        return null;
+      }
+
+      return date;
+    } else {
+      // 尝试直接解析（可能已经是标准格式）
+      const date = new Date(timeString);
+      return isNaN(date.getTime()) ? null : date;
+    }
+  } catch (error) {
+    console.error('时间解析错误:', error, timeString);
+    return null;
+  }
+}
+
+// 辅助函数：检查数据库中的最新数据（更准确的在线判断）
+async function checkDatabaseForRecentData(deviceId) {
+  try {
+    const { data, error } = await supabase
+      .from('iot_data')
+      .select('event_time, temperature, humidity')
+      .eq('device_id', deviceId)
+      .order('event_time', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error('查询数据库最新数据失败:', error);
+      return { hasRecentData: false, lastDataTime: null };
+    }
+
+    if (!data || data.length === 0) {
+      console.log(`设备 ${deviceId} 数据库中没有数据`);
+      return { hasRecentData: false, lastDataTime: null };
+    }
+
+    const latestRecord = data[0];
+    const lastDataTime = new Date(latestRecord.event_time);
+    const now = new Date();
+    const timeDiff = now.getTime() - lastDataTime.getTime();
+    const maxOfflineTime = 60 * 1000; // 1分钟
+    const hasRecentData = timeDiff < maxOfflineTime;
+
+    console.log(`设备 ${deviceId} 数据库数据检查:`, {
+      lastDataTime: latestRecord.event_time,
+      timeDiff: Math.round(timeDiff / 1000) + '秒前',
+      hasRecentData,
+      temperature: latestRecord.temperature,
+      humidity: latestRecord.humidity
+    });
+
+    return {
+      hasRecentData,
+      lastDataTime: latestRecord.event_time,
+      latestData: latestRecord
+    };
+  } catch (error) {
+    console.error('检查数据库数据失败:', error);
+    return { hasRecentData: false, lastDataTime: null };
+  }
 }
 
 // 中间件
@@ -643,10 +716,18 @@ app.get('/devices/:deviceId/management', async (req, res) => {
     // 5. 计算设备状态和健康度
     const latestRecord = latestData?.[0];
     const hasRecentData = latestRecord &&
-      (Date.now() - new Date(latestRecord.event_time).getTime()) < 5 * 60 * 1000;
+      (Date.now() - new Date(latestRecord.event_time).getTime()) < 60 * 1000;
 
     // 优先使用华为云IoT状态，如果获取不到则使用Supabase数据判断
     const isOnline = iotStatus.status === 'online' || hasRecentData;
+
+    console.log(`设备 ${deviceId} 在线状态判断:`, {
+      iotStatus: iotStatus.status,
+      hasRecentData,
+      finalStatus: isOnline ? 'online' : 'offline',
+      iotLastUpdate: iotStatus.last_update,
+      supabaseLastUpdate: latestRecord?.event_time
+    });
 
     // 健康度计算（基于数据完整性和时效性）
     let healthScore = 0;
@@ -1024,6 +1105,51 @@ app.use((req, res) => {
   });
 });
 
+// 调试接口：检查数据库中的最新数据
+app.get('/debug/latest-data/:deviceId?', async (req, res) => {
+  try {
+    const { deviceId } = req.params;
+
+    let query = supabase
+      .from('iot_data')
+      .select('*')
+      .order('event_time', { ascending: false })
+      .limit(10);
+
+    if (deviceId) {
+      query = query.eq('device_id', deviceId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    const now = new Date();
+    const dataWithAge = data.map(record => ({
+      ...record,
+      data_age_seconds: Math.round((now.getTime() - new Date(record.event_time).getTime()) / 1000)
+    }));
+
+    res.json({
+      success: true,
+      data: dataWithAge,
+      total_records: data.length,
+      query_time: now.toISOString(),
+      device_filter: deviceId || 'all'
+    });
+
+  } catch (error) {
+    console.error('获取最新数据失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '获取最新数据失败',
+      message: error.message
+    });
+  }
+});
+
 // 错误处理
 app.use((error, req, res, next) => {
   console.error('服务器错误:', error);
@@ -1081,47 +1207,92 @@ async function sendDeviceData(deviceId) {
     const baseInfo = deviceConfig[deviceId];
     if (!baseInfo) return;
 
-    // 获取华为云IoT实时状态
-    let iotStatus = { status: 'offline', real_time_data: null };
+    // 方案1：检查数据库中的最新数据（主要判断方式）
+    const dbCheck = await checkDatabaseForRecentData(deviceId);
+
+    // 方案2：获取华为云IoT实时状态（备用判断方式）
+    let iotStatus = { status: 'offline', real_time_data: null, last_update: null };
     try {
       const shadowData = await huaweiIoTService.getDeviceShadow(baseInfo.real_name);
       if (shadowData.shadow && shadowData.shadow.length > 0) {
-        const properties = shadowData.shadow[0].reported?.properties;
-        if (properties) {
-          iotStatus = {
-            status: 'online',
-            real_time_data: properties,
-            last_update: shadowData.shadow[0].reported.event_time
-          };
+        const shadowInfo = shadowData.shadow[0];
+        const properties = shadowInfo.reported?.properties;
+        const lastUpdateTime = shadowInfo.reported?.event_time;
+
+        if (properties && lastUpdateTime) {
+          const lastUpdate = parseHuaweiIoTTime(lastUpdateTime);
+
+          if (lastUpdate) {
+            const now = new Date();
+            const timeDiff = now.getTime() - lastUpdate.getTime();
+            const maxOfflineTime = 60 * 1000; // 1分钟
+            const isDataFresh = timeDiff < maxOfflineTime;
+
+            console.log(`设备 ${deviceId} 华为云IoT数据检查:`, {
+              originalTime: lastUpdateTime,
+              parsedTime: lastUpdate.toISOString(),
+              timeDiff: Math.round(timeDiff / 1000) + '秒前',
+              isDataFresh,
+              uptime: properties.uptime
+            });
+
+            iotStatus = {
+              status: isDataFresh ? 'online' : 'offline',
+              real_time_data: properties,
+              last_update: lastUpdateTime,
+              data_age_seconds: Math.round(timeDiff / 1000)
+            };
+          }
         }
       }
     } catch (iotError) {
-      console.warn('获取华为云IoT状态失败:', iotError.message);
+      console.error(`获取设备 ${deviceId} 华为云IoT状态失败:`, iotError.message);
     }
+
+    // 综合判断：优先使用数据库判断，华为云IoT作为备用
+    const finalStatus = dbCheck.hasRecentData ? 'online' :
+                       (iotStatus.status === 'online' ? 'online' : 'offline');
+
+    console.log(`设备 ${deviceId} 最终状态判断:`, {
+      databaseStatus: dbCheck.hasRecentData ? 'online' : 'offline',
+      iotStatus: iotStatus.status,
+      finalStatus,
+      primarySource: dbCheck.hasRecentData ? 'database' : 'huawei_iot'
+    });
 
     // 计算健康度和电池电量
     let healthScore = 0;
     let batteryLevel = 0;
 
-    if (iotStatus.real_time_data) {
-      healthScore = calculateHealthFromIoTData(iotStatus.real_time_data);
-      batteryLevel = calculateBatteryFromUptime(
-        iotStatus.real_time_data.uptime || 0,
-        iotStatus.real_time_data.temperature || 25
-      );
+    // 优先使用华为云IoT数据计算，如果没有则使用数据库数据
+    const dataForCalculation = iotStatus.real_time_data || dbCheck.latestData;
+    if (dataForCalculation) {
+      if (iotStatus.real_time_data) {
+        healthScore = calculateHealthFromIoTData(iotStatus.real_time_data);
+        batteryLevel = calculateBatteryFromUptime(
+          iotStatus.real_time_data.uptime || 0,
+          iotStatus.real_time_data.temperature || 25
+        );
+      } else {
+        // 基于数据库数据的简单健康度计算
+        healthScore = finalStatus === 'online' ? 80 : 0;
+        batteryLevel = finalStatus === 'online' ? 75 : 0;
+      }
     }
 
     // 构建实时数据
     const realtimeData = {
       ...baseInfo,
-      status: iotStatus.status,
-      temperature: iotStatus.real_time_data?.temperature || 0,
-      humidity: iotStatus.real_time_data?.humidity || 0,
+      status: finalStatus,
+      temperature: iotStatus.real_time_data?.temperature || dbCheck.latestData?.temperature || 0,
+      humidity: iotStatus.real_time_data?.humidity || dbCheck.latestData?.humidity || 0,
       health_score: Math.round(healthScore),
       battery_level: Math.round(batteryLevel),
-      signal_strength: iotStatus.status === 'online' ? 85 : 0,
-      last_data_time: iotStatus.last_update || new Date().toISOString(),
+      signal_strength: finalStatus === 'online' ? 85 : 0,
+      last_data_time: dbCheck.lastDataTime || iotStatus.last_update || new Date().toISOString(),
       real_time_data: iotStatus.real_time_data,
+      database_data: dbCheck.latestData,
+      data_source: dbCheck.hasRecentData ? 'database' : 'huawei_iot',
       timestamp: new Date().toISOString()
     };
 
@@ -1135,14 +1306,14 @@ async function sendDeviceData(deviceId) {
   }
 }
 
-// 定时获取并推送实时数据（每1秒一次）
+// 定时获取并推送实时数据（每500毫秒一次，真正实时）
 if (io) {
   setInterval(() => {
     sendDeviceData('device_1');
-  }, 1000);
-  console.log('✅ WebSocket实时数据推送已启动（每1秒）');
+  }, 500);
+  console.log('WebSocket实时数据推送已启动（每500毫秒）');
 } else {
-  console.log('⚠️  WebSocket实时数据推送未启动（Socket.IO不可用）');
+  console.log('WebSocket实时数据推送未启动（Socket.IO不可用）');
 }
 
 // 启动服务器

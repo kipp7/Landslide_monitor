@@ -22,7 +22,7 @@ class DataProcessor {
    * 启动数据处理
    */
   async start() {
-    console.log('🔄 启动数据处理器...');
+    console.log('启动数据处理器...');
     
     // 初始化设备信息
     await this.initializeDevices();
@@ -46,7 +46,7 @@ class DataProcessor {
    */
   async initializeDevices() {
     try {
-      console.log('📱 初始化设备信息...');
+      console.log('初始化设备信息...');
       
       // 获取所有唯一的设备ID
       const { data: devices, error } = await supabase
@@ -56,7 +56,7 @@ class DataProcessor {
         .order('event_time', { ascending: false });
 
       if (error) {
-        console.error('❌ 获取设备数据失败:', error);
+        console.error('获取设备数据失败:', error);
         return;
       }
 
@@ -74,9 +74,9 @@ class DataProcessor {
         await this.upsertDeviceLocation(deviceId, deviceData);
       }
 
-      console.log(`✅ 初始化了 ${deviceMap.size} 个设备`);
+      console.log(`初始化了 ${deviceMap.size} 个设备`);
     } catch (error) {
-      console.error('❌ 初始化设备信息失败:', error);
+      console.error('初始化设备信息失败:', error);
     }
   }
 
@@ -96,12 +96,12 @@ class DataProcessor {
         .upsert([deviceRegistration], { onConflict: 'device_id' });
 
       if (error) {
-        console.error(`❌ 更新设备 ${getDeviceDisplayName(deviceId)} 失败:`, error);
+        console.error(`更新设备 ${getDeviceDisplayName(deviceId)} 失败:`, error);
       } else {
-        console.log(`✅ 设备注册成功: ${getDeviceDisplayName(deviceId)}`);
+        console.log(`设备注册成功: ${getDeviceDisplayName(deviceId)}`);
       }
     } catch (error) {
-      console.error(`❌ 处理设备 ${deviceId} 失败:`, error);
+      console.error(`处理设备 ${deviceId} 失败:`, error);
     }
   }
 
@@ -120,12 +120,12 @@ class DataProcessor {
         .upsert([locationInfo], { onConflict: 'device_id' });
 
       if (error) {
-        console.error(`❌ 更新设备位置 ${getDeviceDisplayName(deviceId)} 失败:`, error);
+        console.error(` 更新设备位置 ${getDeviceDisplayName(deviceId)} 失败:`, error);
       } else {
-        console.log(`📍 设备位置更新: ${getDeviceDisplayName(deviceId)} (${deviceData.latitude}, ${deviceData.longitude})`);
+        console.log(` 设备位置更新: ${getDeviceDisplayName(deviceId)} (${deviceData.latitude}, ${deviceData.longitude})`);
       }
     } catch (error) {
-      console.error(`❌ 处理设备位置 ${deviceId} 失败:`, error);
+      console.error(` 处理设备位置 ${deviceId} 失败:`, error);
     }
   }
 
@@ -133,7 +133,7 @@ class DataProcessor {
    * 启动实时数据处理
    */
   startRealtimeProcessing() {
-    console.log('🔄 启动实时数据处理...');
+    console.log(' 启动实时数据处理...');
     
     const channel = supabase
       .channel('iot_data_processor')
@@ -169,7 +169,7 @@ class DataProcessor {
       await this.updateRiskTrends(record);
       
     } catch (error) {
-      console.error('❌ 处理新数据失败:', error);
+      console.error(' 处理新数据失败:', error);
     }
   }
 
@@ -184,10 +184,10 @@ class DataProcessor {
         .eq('device_id', deviceId);
 
       if (error) {
-        console.error(`❌ 更新设备活跃时间失败:`, error);
+        console.error(` 更新设备活跃时间失败:`, error);
       }
     } catch (error) {
-      console.error('❌ 更新设备活跃时间失败:', error);
+      console.error(' 更新设备活跃时间失败:', error);
     }
   }
 
@@ -203,7 +203,7 @@ class DataProcessor {
       // 首先验证数据有效性
       const validationIssues = validateSensorData(record);
       if (validationIssues.length > 0) {
-        console.warn(`⚠️  数据验证警告 ${record.device_id}:`, validationIssues);
+        console.warn(`  数据验证警告 ${record.device_id}:`, validationIssues);
       }
 
       // 温度异常检测
@@ -284,14 +284,14 @@ class DataProcessor {
           .insert(anomalies);
 
         if (error) {
-          console.error('❌ 插入异常记录失败:', error);
+          console.error(' 插入异常记录失败:', error);
         } else {
-          console.log(`✅ 检测到 ${anomalies.length} 个异常`);
+          console.log(` 检测到 ${anomalies.length} 个异常`);
         }
       }
 
     } catch (error) {
-      console.error('❌ 异常检测失败:', error);
+      console.error(' 异常检测失败:', error);
     }
   }
 
@@ -359,14 +359,14 @@ class DataProcessor {
           .upsert([trendData], { onConflict: 'device_id' });
 
         if (error) {
-          console.error('❌ 更新风险趋势失败:', error);
+          console.error(' 更新风险趋势失败:', error);
         } else if (calculatedRisk > 0.5) {
-          console.log(`⚠️  设备 ${record.device_id} 风险等级: ${calculatedRisk.toFixed(2)} (${anomalyType})`);
+          console.log(`  设备 ${record.device_id} 风险等级: ${calculatedRisk.toFixed(2)} (${anomalyType})`);
         }
       }
 
     } catch (error) {
-      console.error('❌ 更新风险趋势失败:', error);
+      console.error(' 更新风险趋势失败:', error);
     }
   }
 
@@ -388,23 +388,23 @@ class DataProcessor {
         .limit(100);
 
       if (error) {
-        console.error('❌ 获取历史数据失败:', error);
+        console.error(' 获取历史数据失败:', error);
         return;
       }
 
       if (records && records.length > 0) {
-        console.log(`🔄 处理 ${records.length} 条历史数据...`);
+        console.log(` 处理 ${records.length} 条历史数据...`);
         
         for (const record of records) {
           await this.processNewData(record);
           this.lastProcessedId = record.id;
         }
         
-        console.log(`✅ 历史数据处理完成，最新ID: ${this.lastProcessedId}`);
+        console.log(` 历史数据处理完成，最新ID: ${this.lastProcessedId}`);
       }
 
     } catch (error) {
-      console.error('❌ 处理历史数据失败:', error);
+      console.error(' 处理历史数据失败:', error);
     } finally {
       this.isProcessing = false;
     }
@@ -415,7 +415,7 @@ class DataProcessor {
    */
   async checkDeviceOfflineStatus() {
     try {
-      console.log('🔍 检查设备离线状态...');
+      console.log(' 检查设备离线状态...');
 
       const config = getAnomalyConfig();
       const offlineThreshold = new Date(Date.now() - config.thresholds.offline.timeout);
@@ -427,12 +427,12 @@ class DataProcessor {
         .lt('last_active', offlineThreshold.toISOString());
 
       if (error) {
-        console.error('❌ 查询离线设备失败:', error);
+        console.error(' 查询离线设备失败:', error);
         return;
       }
 
       if (offlineDevices && offlineDevices.length > 0) {
-        console.log(`⚠️  发现 ${offlineDevices.length} 个离线设备`);
+        console.log(`  发现 ${offlineDevices.length} 个离线设备`);
 
         // 为每个离线设备创建异常记录
         const offlineAnomalies = offlineDevices.map(device => ({
@@ -453,20 +453,20 @@ class DataProcessor {
           .insert(offlineAnomalies);
 
         if (insertError) {
-          console.error('❌ 插入离线异常记录失败:', insertError);
+          console.error(' 插入离线异常记录失败:', insertError);
         } else {
           offlineDevices.forEach(device => {
             const displayName = device.friendly_name || getDeviceDisplayName(device.device_id);
             const offlineMinutes = Math.floor((Date.now() - new Date(device.last_active).getTime()) / 60000);
-            console.log(`📵 设备离线: ${displayName} (${offlineMinutes}分钟)`);
+            console.log(` 设备离线: ${displayName} (${offlineMinutes}分钟)`);
           });
         }
       } else {
-        console.log('✅ 所有设备在线');
+        console.log(' 所有设备在线');
       }
 
     } catch (error) {
-      console.error('❌ 检查设备离线状态失败:', error);
+      console.error(' 检查设备离线状态失败:', error);
     }
   }
 }
@@ -475,15 +475,15 @@ class DataProcessor {
 if (require.main === module) {
   const processor = new DataProcessor();
   processor.start().then(() => {
-    console.log('✅ 数据处理器启动成功');
+    console.log(' 数据处理器启动成功');
     
     // 优雅关闭
     process.on('SIGINT', () => {
-      console.log('\n🛑 正在停止数据处理器...');
+      console.log('\n 正在停止数据处理器...');
       process.exit(0);
     });
   }).catch(error => {
-    console.error('❌ 数据处理器启动失败:', error);
+    console.error(' 数据处理器启动失败:', error);
     process.exit(1);
   });
 }

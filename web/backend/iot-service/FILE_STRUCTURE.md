@@ -1,6 +1,6 @@
 # IoT服务文件结构
 
-## 核心服务文件
+## 🚀 核心服务文件
 ```
 iot-server.js                    # 主服务器（包含华为云IoT设备控制）
 huawei-iot-service.js           # 华为云IoT服务封装
@@ -9,7 +9,7 @@ device-registry.js              # 设备注册管理
 device-mapper.js                # 设备映射管理
 ```
 
-## 配置文件
+## ⚙️ 配置文件
 ```
 .env                            # 环境变量配置
 .env.example                    # 配置示例
@@ -17,14 +17,14 @@ package.json                    # 项目配置
 package-lock.json               # 依赖锁定
 ```
 
-## 文档文件
+## 📚 文档文件
 ```
 README.md                       # 项目说明
 HUAWEI_IOT_CONFIG.md           # 华为云IoT配置指南
 FILE_STRUCTURE.md              # 文件结构说明（本文件）
 ```
 
-## 数据库文件
+## 🗄️ 数据库文件
 ```
 database_migration.sql          # 主数据库迁移
 device-mapping-migration.sql    # 设备映射表
@@ -33,7 +33,7 @@ add-deformation-fields.sql      # 添加形变字段
 fix-*.sql                       # 数据库修复脚本
 ```
 
-## 工具脚本
+## 🔧 工具脚本
 ```
 anomaly-config.js               # 异常检测配置
 check-*.js                      # 各种检查脚本
@@ -42,19 +42,19 @@ fix-*.js                        # 数据修复脚本
 start.sh                        # 服务启动脚本
 ```
 
-## 日志文件
+## 📊 日志文件
 ```
 server.log                      # 服务器运行日志
 ```
 
-## 依赖文件夹
+## 📁 依赖文件夹
 ```
 node_modules/                   # Node.js依赖包
 ```
 
 ---
 
-## 主要功能文件说明
+## 🎯 主要功能文件说明
 
 ### `iot-server.js`
 - 主服务器文件
@@ -83,7 +83,7 @@ node_modules/                   # Node.js依赖包
 
 ---
 
-## 快速启动
+## 🚀 快速启动
 ```bash
 npm install
 cp .env.example .env
@@ -91,6 +91,6 @@ cp .env.example .env
 npm start
 ```
 
-## 主要端口
+## 📡 主要端口
 - **5100** - IoT服务器端口
 - **3000** - 前端服务端口（需单独启动）
