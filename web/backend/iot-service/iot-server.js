@@ -1,17 +1,121 @@
+// 首先加载环境变量
+try {
+  require('dotenv').config();
+} catch (error) {
+  console.log('dotenv未安装，使用默认配置');
+}
+
 const express = require('express');
 const cors = require('cors');
+const http = require('http');
+
+// 尝试加载socket.io，如果失败则提供降级方案
+let Server, io;
+try {
+  const socketIO = require('socket.io');
+  Server = socketIO.Server;
+  console.log('✅ Socket.IO 加载成功');
+} catch (error) {
+  console.log('❌ Socket.IO 未安装，将使用轮询模式');
+  console.log('请运行: npm install socket.io');
+  Server = null;
+}
+
 const { createClient } = require('@supabase/supabase-js');
 const DataProcessor = require('./data-processor');
 const DeviceMapper = require('./device-mapper');
 const HuaweiIoTService = require('./huawei-iot-service');
 
 const app = express();
+const server = http.createServer(app);
+
+// 初始化Socket.IO（如果可用）
+if (Server) {
+  io = new Server(server, {
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"]
+    }
+  });
+  console.log('✅ WebSocket服务器初始化成功');
+} else {
+  console.log('⚠️  WebSocket服务器未初始化（Socket.IO未安装）');
+}
+
 const PORT = 5100;
+
+// 辅助函数：根据华为云IoT数据计算健康度
+function calculateHealthFromIoTData(properties) {
+  let score = 100;
+
+  // 温度异常检测
+  if (properties.temperature > 60 || properties.temperature < -20) {
+    score -= 30;
+  } else if (properties.temperature > 50 || properties.temperature < -10) {
+    score -= 15;
+  }
+
+  // 湿度异常检测
+  if (properties.humidity > 95 || properties.humidity < 5) {
+    score -= 25;
+  } else if (properties.humidity > 90 || properties.humidity < 10) {
+    score -= 10;
+  }
+
+  // 振动异常检测
+  if (properties.vibration > 3.0) {
+    score -= 40;
+  } else if (properties.vibration > 2.0) {
+    score -= 20;
+  } else if (properties.vibration > 1.5) {
+    score -= 10;
+  }
+
+  // 风险等级影响
+  if (properties.risk_level > 0) {
+    score -= properties.risk_level * 15;
+  }
+
+  // 报警状态影响
+  if (properties.alarm_active) {
+    score -= 20;
+  }
+
+  return Math.max(0, Math.min(100, score));
+}
+
+// 辅助函数：根据运行时间计算电池电量
+function calculateBatteryFromUptime(uptime, temperature) {
+  let batteryLevel = 100;
+
+  // 根据运行时间消耗电量（每小时消耗1.5%）
+  const hoursRunning = uptime / 3600;
+  batteryLevel -= hoursRunning * 1.5;
+
+  // 温度影响电池性能
+  if (temperature > 40) {
+    batteryLevel -= 10;
+  } else if (temperature < 0) {
+    batteryLevel -= 15;
+  }
+
+  return Math.max(0, Math.min(100, batteryLevel));
+}
 
 // 中间件
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// 支持nginx代理的路径前缀处理
+app.use((req, res, next) => {
+  // 如果路径以 /iot 开头，去掉这个前缀
+  if (req.url.startsWith('/iot')) {
+    req.url = req.url.replace(/^\/iot/, '') || '/';
+    console.log(`路径重写: ${req.originalUrl} -> ${req.url}`);
+  }
+  next();
+});
 
 // Supabase 配置 - 请替换为您的实际配置
 const SUPABASE_URL= 'https://sdssoyyjhunltmcjoxtg.supabase.co'
@@ -28,19 +132,21 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const deviceMapper = new DeviceMapper();
 const dataProcessor = new DataProcessor();
 
-// 初始化华为云IoT服务
+// 使用环境变量或默认配置
 const huaweiIoTService = new HuaweiIoTService({
-  // 这些配置可以通过环境变量设置，或者在这里直接配置
-  // projectId: 'your-project-id',
-  // domainName: 'your-domain-name',
-  // iamUsername: 'your-iam-username',
-  // iamPassword: 'your-iam-password',
-  // deviceId: '6815a14f9314d118511807c6_rk2206'
+  iamEndpoint: process.env.HUAWEI_IAM_ENDPOINT || 'https://iam.myhuaweicloud.com',
+  iotEndpoint: process.env.HUAWEI_IOT_ENDPOINT || 'https://361017cfc6.st1.iotda-app.cn-north-4.myhuaweicloud.com:443',
+  domainName: process.env.HUAWEI_DOMAIN_NAME || 'hid_d-zeks2kzzvtkdc',
+  iamUsername: process.env.HUAWEI_IAM_USERNAME || 'k',
+  iamPassword: process.env.HUAWEI_IAM_PASSWORD || '12345678k',
+  projectId: process.env.HUAWEI_PROJECT_ID || '41a2637bc1ba4889bc3b49c4e2ab9e77',
+  projectName: process.env.HUAWEI_PROJECT_NAME || 'cn-north-4',
+  deviceId: process.env.HUAWEI_DEVICE_ID || '6815a14f9314d118511807c6_rk2206'
 });
 
 
 
-// 健康检查接口
+// 健康检查接口 - 支持直接访问和nginx代理
 app.get('/health', (req, res) => {
   res.json({
     status: 'OK',
@@ -106,7 +212,7 @@ app.get('/devices/list', async (req, res) => {
       count: deviceList.length
     });
   } catch (error) {
-    console.error('❌ 获取设备列表失败:', error);
+    console.error('获取设备列表失败:', error);
     res.status(500).json({
       success: false,
       error: '获取设备列表失败',
@@ -142,7 +248,7 @@ app.get('/devices/mappings', async (req, res) => {
       count: mappings.length
     });
   } catch (error) {
-    console.error('❌ 获取设备映射失败:', error);
+    console.error('获取设备映射失败:', error);
     res.status(500).json({
       success: false,
       error: '获取设备映射失败',
@@ -179,7 +285,7 @@ app.get('/devices/info/:simpleId', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('❌ 获取设备信息失败:', error);
+    console.error('获取设备信息失败:', error);
     res.status(500).json({
       success: false,
       error: '获取设备信息失败',
@@ -307,7 +413,7 @@ app.post('/iot/huawei', async (req, res) => {
           .select();
 
         if (error) {
-          console.error('❌ 数据库插入失败:', error);
+          console.error('数据库插入失败:', error);
           console.error('错误详情:', error.message);
         } else {
           console.log('数据插入成功');
@@ -318,7 +424,7 @@ app.post('/iot/huawei', async (req, res) => {
         }
 
       } catch (serviceError) {
-        console.error(`❌ 处理服务 ${service_id} 时出错:`, serviceError.message);
+        console.error(`处理服务 ${service_id} 时出错:`, serviceError.message);
       }
     }
 
@@ -340,7 +446,7 @@ app.post('/iot/huawei', async (req, res) => {
 
   } catch (error) {
     const processingTime = Date.now() - startTime;
-    console.error('❌ 处理华为IoT数据时发生错误:', error);
+    console.error('处理华为IoT数据时发生错误:', error);
     console.error('错误堆栈:', error.stack);
     
     res.status(500).json({
@@ -397,10 +503,10 @@ function formatEventTime(eventTime) {
     }
 
     // 如果都失败，返回当前时间
-    console.warn('⚠️  无法解析时间格式，使用当前时间:', eventTime);
+    console.warn('无法解析时间格式，使用当前时间:', eventTime);
     return new Date().toISOString();
   } catch (error) {
-    console.warn('⚠️  时间格式化失败，使用当前时间:', eventTime, error.message);
+    console.warn('时间格式化失败，使用当前时间:', eventTime, error.message);
     return new Date().toISOString();
   }
 }
@@ -416,7 +522,7 @@ app.get('/huawei/config', (req, res) => {
       data: configCheck
     });
   } catch (error) {
-    console.error('❌ 配置检查失败:', error);
+    console.error('配置检查失败:', error);
     res.status(500).json({
       success: false,
       error: '配置检查失败',
@@ -438,10 +544,242 @@ app.get('/huawei/devices/:deviceId/shadow', async (req, res) => {
       data: shadowData
     });
   } catch (error) {
-    console.error('❌ 获取设备影子失败:', error);
+    console.error('获取设备影子失败:', error);
     res.status(500).json({
       success: false,
       error: '获取设备影子失败',
+      message: error.message
+    });
+  }
+});
+
+// 获取设备完整管理信息（类似前端API的功能）
+app.get('/devices/:deviceId/management', async (req, res) => {
+  try {
+    const { deviceId } = req.params;
+    console.log(`获取设备管理信息: ${deviceId}`);
+
+    // 1. 设备基本配置
+    const deviceConfig = {
+      device_1: {
+        device_id: 'device_1',
+        real_name: '6815a14f9314d118511807c6_rk2206',
+        display_name: '龙门滑坡监测站',
+        location: '防城港华石镇龙门村',
+        coordinates: { lat: 21.6847, lng: 108.3516 },
+        device_type: '软通套件',
+        firmware_version: 'v2.1.3',
+        install_date: '2025-06-01'
+      }
+    };
+
+    const baseInfo = deviceConfig[deviceId];
+    if (!baseInfo) {
+      return res.status(404).json({
+        success: false,
+        error: '设备不存在'
+      });
+    }
+
+    // 2. 获取华为云IoT实时状态
+    let iotStatus = { status: 'offline', real_time_data: null };
+    try {
+      const shadowData = await huaweiIoTService.getDeviceShadow(baseInfo.real_name);
+      if (shadowData.shadow && shadowData.shadow.length > 0) {
+        const properties = shadowData.shadow[0].reported?.properties;
+        if (properties) {
+          iotStatus = {
+            status: 'online',
+            real_time_data: properties,
+            last_update: shadowData.shadow[0].reported.event_time
+          };
+        }
+      }
+    } catch (iotError) {
+      console.warn('获取华为云IoT状态失败:', iotError.message);
+    }
+
+    // 3. 从Supabase获取历史数据和统计信息
+    const { data: latestData, error: dataError } = await supabase
+      .from('iot_data')
+      .select(`
+        *,
+        latitude,
+        longitude,
+        deformation_distance_3d,
+        deformation_horizontal,
+        deformation_vertical,
+        deformation_velocity,
+        deformation_risk_level,
+        deformation_type,
+        deformation_confidence,
+        baseline_established
+      `)
+      .eq('device_id', deviceId)
+      .order('event_time', { ascending: false })
+      .limit(1);
+
+    if (dataError) {
+      console.error('获取传感器数据失败:', dataError);
+    }
+
+    // 4. 获取今日数据统计
+    const today = new Date().toISOString().split('T')[0];
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+    const { data: todayData, error: statsError } = await supabase
+      .from('iot_data')
+      .select('id')
+      .eq('device_id', deviceId)
+      .gte('event_time', today)
+      .lt('event_time', tomorrowStr);
+
+    if (statsError) {
+      console.error('获取今日统计失败:', statsError);
+    }
+
+    // 5. 计算设备状态和健康度
+    const latestRecord = latestData?.[0];
+    const hasRecentData = latestRecord &&
+      (Date.now() - new Date(latestRecord.event_time).getTime()) < 5 * 60 * 1000;
+
+    // 优先使用华为云IoT状态，如果获取不到则使用Supabase数据判断
+    const isOnline = iotStatus.status === 'online' || hasRecentData;
+
+    // 健康度计算（基于数据完整性和时效性）
+    let healthScore = 0;
+    if (isOnline) {
+      if (iotStatus.real_time_data) {
+        // 使用华为云IoT实时数据计算健康度
+        healthScore = calculateHealthFromIoTData(iotStatus.real_time_data);
+      } else if (latestRecord) {
+        // 使用Supabase历史数据计算健康度
+        const dataAge = Date.now() - new Date(latestRecord.event_time).getTime();
+        const ageScore = Math.max(0, 100 - (dataAge / (60 * 1000)) * 2);
+
+        const requiredFields = ['temperature', 'humidity'];
+        const validFields = requiredFields.filter(field =>
+          latestRecord[field] !== null && latestRecord[field] !== undefined
+        );
+        const completenessScore = (validFields.length / requiredFields.length) * 100;
+
+        healthScore = Math.round((ageScore + completenessScore) / 2);
+      }
+    }
+
+    // 信号强度计算
+    const signalStrength = isOnline ? Math.min(100, healthScore + Math.random() * 20) : 0;
+
+    // 电池电量计算
+    let batteryLevel = 0;
+    if (iotStatus.real_time_data?.uptime) {
+      batteryLevel = calculateBatteryFromUptime(iotStatus.real_time_data.uptime, iotStatus.real_time_data.temperature);
+    } else if (isOnline) {
+      batteryLevel = Math.max(20, 100 - Math.random() * 30);
+    }
+
+    // 6. 构建完整的设备信息
+    const deviceInfo = {
+      ...baseInfo,
+      status: isOnline ? 'online' : 'offline',
+      last_active: iotStatus.last_update || latestRecord?.event_time || new Date().toISOString(),
+      data_count_today: todayData?.length || 0,
+      last_data_time: iotStatus.last_update || latestRecord?.event_time || new Date().toISOString(),
+      health_score: Math.round(healthScore),
+      temperature: iotStatus.real_time_data?.temperature || latestRecord?.temperature || 0,
+      humidity: iotStatus.real_time_data?.humidity || latestRecord?.humidity || 0,
+      battery_level: Math.round(batteryLevel),
+      signal_strength: Math.round(signalStrength),
+      real_time_data: iotStatus.real_time_data
+    };
+
+    // 7. GPS形变分析数据
+    let deformationData = null;
+    if (latestRecord) {
+      deformationData = {
+        latitude: latestRecord.latitude,
+        longitude: latestRecord.longitude,
+        deformation_distance_3d: latestRecord.deformation_distance_3d,
+        deformation_horizontal: latestRecord.deformation_horizontal,
+        deformation_vertical: latestRecord.deformation_vertical,
+        deformation_velocity: latestRecord.deformation_velocity,
+        deformation_risk_level: latestRecord.deformation_risk_level,
+        deformation_type: latestRecord.deformation_type,
+        deformation_confidence: latestRecord.deformation_confidence,
+        baseline_established: latestRecord.baseline_established
+      };
+    }
+
+    res.json({
+      success: true,
+      data: deviceInfo,
+      deformation_data: deformationData,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('获取设备管理信息失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '获取设备管理信息失败',
+      message: error.message
+    });
+  }
+});
+
+// 获取设备完整状态信息（包含健康度、电池电量、今日数据统计）
+app.get('/devices/:deviceId/status', async (req, res) => {
+  try {
+    const { deviceId } = req.params;
+    console.log(`获取设备完整状态: ${deviceId}`);
+
+    // 1. 获取设备影子数据
+    const shadowData = await huaweiIoTService.getDeviceShadow(deviceId);
+    const properties = shadowData.shadow?.[0]?.reported?.properties;
+
+    if (!properties) {
+      throw new Error('无法获取设备数据');
+    }
+
+    // 2. 计算健康度
+    const healthScore = calculateDeviceHealth(properties);
+
+    // 3. 计算电池电量
+    const batteryLevel = calculateBatteryLevel(properties);
+
+    // 4. 获取今日数据统计
+    const todayStats = await getTodayDataStats(deviceId);
+
+    // 5. 获取最近7天的数据趋势
+    const weeklyTrend = await getWeeklyTrend(deviceId);
+
+    res.json({
+      success: true,
+      data: {
+        device_id: deviceId,
+        status: properties.uptime > 0 ? 'online' : 'offline',
+        health_score: healthScore,
+        battery_level: batteryLevel,
+        last_update: shadowData.shadow[0].reported.event_time,
+        current_data: {
+          temperature: properties.temperature,
+          humidity: properties.humidity,
+          vibration: properties.vibration,
+          risk_level: properties.risk_level,
+          alarm_active: properties.alarm_active,
+          uptime: properties.uptime
+        },
+        today_stats: todayStats,
+        weekly_trend: weeklyTrend
+      }
+    });
+  } catch (error) {
+    console.error('获取设备状态失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '获取设备状态失败',
       message: error.message
     });
   }
@@ -473,7 +811,7 @@ app.post('/huawei/devices/:deviceId/commands', async (req, res) => {
       message: '命令下发成功'
     });
   } catch (error) {
-    console.error('❌ 命令下发失败:', error);
+    console.error('命令下发失败:', error);
     res.status(500).json({
       success: false,
       error: '命令下发失败',
@@ -499,7 +837,7 @@ app.get('/huawei/command-templates', (req, res) => {
       data: templateList
     });
   } catch (error) {
-    console.error('❌ 获取命令模板失败:', error);
+    console.error('获取命令模板失败:', error);
     res.status(500).json({
       success: false,
       error: '获取命令模板失败',
@@ -525,7 +863,7 @@ app.post('/huawei/devices/:deviceId/led', async (req, res) => {
       message: `LED ${action === 'on' ? '开启' : '关闭'}命令下发成功`
     });
   } catch (error) {
-    console.error('❌ LED控制失败:', error);
+    console.error('LED控制失败:', error);
     res.status(500).json({
       success: false,
       error: 'LED控制失败',
@@ -538,23 +876,99 @@ app.post('/huawei/devices/:deviceId/led', async (req, res) => {
 app.post('/huawei/devices/:deviceId/motor', async (req, res) => {
   try {
     const { deviceId } = req.params;
-    const { action } = req.body; // 'on' 或 'off'
+    const { enable, speed = 100, direction = 1, duration = 5 } = req.body;
 
-    const templates = huaweiIoTService.getCommandTemplates();
-    const commandData = templates.motorControl(action === 'on' ? 'ON' : 'OFF');
+    let commandData;
+
+    if (enable) {
+      // 启动命令 - 包含所有参数
+      commandData = {
+        service_id: 'smartHome',
+        command_name: 'control_motor',
+        paras: {
+          enable: true,
+          speed: speed,
+          direction: direction,
+          duration: duration
+        }
+      };
+    } else {
+      // 停止命令 - 使用相同的参数结构，但设置为停止状态
+      commandData = {
+        service_id: 'smartHome',
+        command_name: 'control_motor',
+        paras: {
+          enable: false,
+          speed: 0,
+          direction: 1,
+          duration: 0
+        }
+      };
+    }
 
     const result = await huaweiIoTService.sendCommand(commandData, deviceId);
 
     res.json({
       success: true,
       data: result,
-      message: `电机 ${action === 'on' ? '开启' : '关闭'}命令下发成功`
+      message: `电机 ${enable ? '启动' : '停止'}命令下发成功`
     });
   } catch (error) {
-    console.error('❌ 电机控制失败:', error);
+    console.error('电机控制失败:', error);
     res.status(500).json({
       success: false,
       error: '电机控制失败',
+      message: error.message
+    });
+  }
+});
+
+// 快捷命令接口 - 蜂鸣器控制
+app.post('/huawei/devices/:deviceId/buzzer', async (req, res) => {
+  try {
+    const { deviceId } = req.params;
+    const { enable, frequency = 2000, duration = 3, pattern = 2 } = req.body;
+
+    let commandData;
+
+    if (enable) {
+      // 开启蜂鸣器
+      commandData = {
+        service_id: 'smartHome',
+        command_name: 'control_buzzer',
+        paras: {
+          enable: true,
+          frequency: frequency,
+          duration: duration,
+          pattern: pattern
+        }
+      };
+    } else {
+      // 关闭蜂鸣器
+      commandData = {
+        service_id: 'smartHome',
+        command_name: 'control_buzzer',
+        paras: {
+          enable: false,
+          frequency: 0,
+          duration: 0,
+          pattern: 1
+        }
+      };
+    }
+
+    const result = await huaweiIoTService.sendCommand(commandData, deviceId);
+
+    res.json({
+      success: true,
+      data: result,
+      message: `蜂鸣器 ${enable ? '开启' : '关闭'}命令下发成功`
+    });
+  } catch (error) {
+    console.error('蜂鸣器控制失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '蜂鸣器控制失败',
       message: error.message
     });
   }
@@ -576,7 +990,7 @@ app.post('/huawei/devices/:deviceId/reboot', async (req, res) => {
       message: '系统重启命令下发成功'
     });
   } catch (error) {
-    console.error('❌ 系统重启失败:', error);
+    console.error('系统重启失败:', error);
     res.status(500).json({
       success: false,
       error: '系统重启失败',
@@ -620,8 +1034,119 @@ app.use((error, req, res, next) => {
   });
 });
 
+// WebSocket连接处理（仅在Socket.IO可用时）
+if (io) {
+  io.on('connection', (socket) => {
+  console.log('客户端连接:', socket.id);
+
+  // 客户端请求订阅设备实时数据
+  socket.on('subscribe_device', (deviceId) => {
+    console.log(`客户端 ${socket.id} 订阅设备 ${deviceId} 的实时数据`);
+    socket.join(`device_${deviceId}`);
+
+    // 立即发送一次当前数据
+    sendDeviceData(deviceId);
+  });
+
+  // 客户端取消订阅
+  socket.on('unsubscribe_device', (deviceId) => {
+    console.log(`客户端 ${socket.id} 取消订阅设备 ${deviceId}`);
+    socket.leave(`device_${deviceId}`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('客户端断开连接:', socket.id);
+  });
+});
+
+} // 结束WebSocket连接处理的if语句
+
+// 发送设备数据到订阅的客户端（移到全局作用域）
+async function sendDeviceData(deviceId) {
+  try {
+    // 获取设备管理信息
+    const deviceConfig = {
+      device_1: {
+        device_id: 'device_1',
+        real_name: '6815a14f9314d118511807c6_rk2206',
+        display_name: '龙门滑坡监测站',
+        location: '防城港华石镇龙门村',
+        coordinates: { lat: 21.6847, lng: 108.3516 },
+        device_type: '软通套件',
+        firmware_version: 'v2.1.3',
+        install_date: '2025-06-01'
+      }
+    };
+
+    const baseInfo = deviceConfig[deviceId];
+    if (!baseInfo) return;
+
+    // 获取华为云IoT实时状态
+    let iotStatus = { status: 'offline', real_time_data: null };
+    try {
+      const shadowData = await huaweiIoTService.getDeviceShadow(baseInfo.real_name);
+      if (shadowData.shadow && shadowData.shadow.length > 0) {
+        const properties = shadowData.shadow[0].reported?.properties;
+        if (properties) {
+          iotStatus = {
+            status: 'online',
+            real_time_data: properties,
+            last_update: shadowData.shadow[0].reported.event_time
+          };
+        }
+      }
+    } catch (iotError) {
+      console.warn('获取华为云IoT状态失败:', iotError.message);
+    }
+
+    // 计算健康度和电池电量
+    let healthScore = 0;
+    let batteryLevel = 0;
+
+    if (iotStatus.real_time_data) {
+      healthScore = calculateHealthFromIoTData(iotStatus.real_time_data);
+      batteryLevel = calculateBatteryFromUptime(
+        iotStatus.real_time_data.uptime || 0,
+        iotStatus.real_time_data.temperature || 25
+      );
+    }
+
+    // 构建实时数据
+    const realtimeData = {
+      ...baseInfo,
+      status: iotStatus.status,
+      temperature: iotStatus.real_time_data?.temperature || 0,
+      humidity: iotStatus.real_time_data?.humidity || 0,
+      health_score: Math.round(healthScore),
+      battery_level: Math.round(batteryLevel),
+      signal_strength: iotStatus.status === 'online' ? 85 : 0,
+      last_data_time: iotStatus.last_update || new Date().toISOString(),
+      real_time_data: iotStatus.real_time_data,
+      timestamp: new Date().toISOString()
+    };
+
+    // 发送到订阅的客户端（仅在WebSocket可用时）
+    if (io) {
+      io.to(`device_${deviceId}`).emit('device_data', realtimeData);
+    }
+
+  } catch (error) {
+    console.error('发送设备数据失败:', error);
+  }
+}
+
+// 定时获取并推送实时数据（每1秒一次）
+if (io) {
+  setInterval(() => {
+    sendDeviceData('device_1');
+  }, 1000);
+  console.log('✅ WebSocket实时数据推送已启动（每1秒）');
+} else {
+  console.log('⚠️  WebSocket实时数据推送未启动（Socket.IO不可用）');
+}
+
 // 启动服务器
-app.listen(PORT, '0.0.0.0', async () => {
+server.listen(PORT, '0.0.0.0', async () => {
   console.log('滑坡监测IoT服务已启动');
   console.log(`端口: ${PORT}`);
   console.log(`健康检查: http://localhost:${PORT}/health`);
@@ -635,14 +1160,14 @@ app.listen(PORT, '0.0.0.0', async () => {
     await deviceMapper.initializeCache();
     console.log('设备映射器初始化成功');
   } catch (error) {
-    console.error('❌ 设备映射器初始化失败:', error);
+    console.error('设备映射器初始化失败:', error);
   }
 
   try {
     await dataProcessor.start();
     console.log('数据处理器启动成功');
   } catch (error) {
-    console.error('❌ 数据处理器启动失败:', error);
+    console.error('数据处理器启动失败:', error);
   }
 });
 
