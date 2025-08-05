@@ -161,19 +161,43 @@ export default function AnalysisPage() {
         </div>
       )}
 
-      {/* 顶部标题 + 蓝光条 */}
-      <div className="relative w-full flex justify-center items-center py-0 z-10">
-        <div className="absolute w-[600px] h-[6px] bg-cyan-400 blur-md opacity-30 rounded-full" />
-        <div
-          className="text-[35px] font-extrabold text-cyan-300 tracking-[10px] z-10"
-          style={{
-            textShadow: '0 0 10px rgba(0,255,255,0.7), 0 0 20px rgba(0,255,255,0.4)',
-            letterSpacing: '0.25em',
-          }}
-        >
-          山体滑坡数据监测大屏
-        </div>
-      </div>
+      {/* 顶部标题 + 蓝光条 + 左右导航标签 */}
+<div className="relative w-full flex justify-center items-center py-0 z-10">
+  {/* 蓝色光条 */}
+  <div className="absolute w-[600px] h-[6px] bg-cyan-400 blur-md opacity-30 rounded-full" />
+  
+  {/* 左侧标签 */}
+  <div className="absolute left-8 top-1/2 -translate-y-1/2 flex space-x-6 z-20">
+    <div className="text-lg font-bold text-cyan-200 hover:text-white cursor-pointer transition">
+      首页
+    </div>
+    <div className="text-lg font-bold text-cyan-200 hover:text-white cursor-pointer transition">
+      设备管理
+    </div>
+  </div>
+
+  {/* 右侧标签 */}
+  <div className="absolute right-8 top-1/2 -translate-y-1/2 flex space-x-6 z-20">
+    <div className="text-lg font-bold text-cyan-200 hover:text-white cursor-pointer transition">
+      GPS形变分析
+    </div>
+    <div className="text-lg font-bold text-cyan-200 hover:text-white cursor-pointer transition">
+      系统设置
+    </div>
+  </div>
+
+  {/* 中央标题 */}
+  <div
+    className="text-[35px] font-extrabold text-cyan-300 tracking-[10px] z-10"
+    style={{
+      textShadow: '0 0 10px rgba(0,255,255,0.7), 0 0 20px rgba(0,255,255,0.4)',
+      letterSpacing: '0.25em',
+    }}
+  >
+    山体滑坡数据监测大屏
+  </div>
+</div>
+
 
       {/* 性能警告 */}
       {warnings.length > 0 && (
@@ -236,7 +260,7 @@ export default function AnalysisPage() {
                     ) : mapType === '视频' ? (
                       <div className="w-full h-full bg-black rounded-lg flex items-center justify-center">
                         <img
-                          src={`http://${process.env.NEXT_PUBLIC_CAMERA_IP || '192.168.171.55'}:${process.env.NEXT_PUBLIC_CAMERA_PORT || '80'}/stream?t=${Date.now()}`}
+                          src={`http://192.168.43.55/stream?t=${Date.now()}`}
                           className="max-w-full max-h-full object-contain"
                           alt="ESP32-CAM 实时视频流"
                           onError={(e) => {

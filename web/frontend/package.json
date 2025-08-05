@@ -30,7 +30,9 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-leaflet": "^4.2.1",
+    "recharts": "^2.12.7",
     "resium": "^1.17.2",
+    "socket.io-client": "^4.7.5",
     "swr": "^2.0.0",
     "ws": "^8.18.3",
     "zustand": "^4.0.6"

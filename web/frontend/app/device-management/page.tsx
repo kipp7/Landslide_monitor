@@ -142,14 +142,16 @@ export default function DeviceManagementPage() {
 
   // GPS形变分析数据状态
   const [deformationData, setDeformationData] = useState({
-    deformation_distance_3d: 0.125,
-    deformation_horizontal: 0.089,
-    deformation_vertical: -0.036,
-    deformation_velocity: 0.0023,
-    deformation_risk_level: 1,
-    deformation_type: 3, // 复合形变
-    deformation_confidence: 0.87,
-    baseline_established: true
+    deformation_distance_3d: 0,
+    deformation_horizontal: 0,
+    deformation_vertical: 0,
+    deformation_velocity: 0,
+    deformation_risk_level: 0,
+    deformation_type: 0,
+    deformation_confidence: 0,
+    baseline_established: false,
+    loading: true,
+    error: null as string | null
   });
 
   // 计算设备健康度算法
@@ -235,10 +237,7 @@ export default function DeviceManagementPage() {
         setDeviceInfo(result.data);
         setLastUpdateTime(new Date().toLocaleTimeString());
 
-        // 更新GPS形变分析数据
-        if (result.deformation_data) {
-          setDeformationData(result.deformation_data);
-        }
+        // GPS形变分析数据将通过专门的API获取
 
         if (showMessage) {
           message.success('数据刷新成功');
@@ -258,7 +257,55 @@ export default function DeviceManagementPage() {
     }
   }, []);
 
+  // 获取GPS形变分析数据
+  const fetchDeformationData = useCallback(async (showMessage = false) => {
+    try {
+      setDeformationData(prev => ({ ...prev, loading: true, error: null }));
 
+      const response = await fetch(`/iot/api/device-management/deformation/${deviceInfo.device_id}/summary`);
+      const result = await response.json();
+
+      if (result.success) {
+        setDeformationData({
+          deformation_distance_3d: result.max_displacement || 0,
+          deformation_horizontal: result.horizontal_displacement || 0,
+          deformation_vertical: result.vertical_displacement || 0,
+          deformation_velocity: result.velocity || 0,
+          deformation_risk_level: result.risk_level || 0,
+          deformation_type: result.deformation_type || 0,
+          deformation_confidence: result.confidence || 0,
+          baseline_established: result.hasBaseline || false,
+          loading: false,
+          error: null
+        });
+
+        if (showMessage) {
+          message.success('形变数据刷新成功');
+        }
+      } else {
+        setDeformationData(prev => ({
+          ...prev,
+          loading: false,
+          error: result.error || '获取形变数据失败'
+        }));
+
+        if (showMessage) {
+          message.error('形变数据刷新失败');
+        }
+      }
+    } catch (error) {
+      console.error('获取形变数据错误:', error);
+      setDeformationData(prev => ({
+        ...prev,
+        loading: false,
+        error: '网络连接错误'
+      }));
+
+      if (showMessage) {
+        message.error('形变数据网络错误');
+      }
+    }
+  }, [deviceInfo.device_id]);
 
   // WebSocket连接管理
   useEffect(() => {
@@ -266,19 +313,21 @@ export default function DeviceManagementPage() {
 
     // 初始加载数据
     fetchRealTimeData(true);
+    // 初始加载形变分析数据
+    fetchDeformationData(false);
 
     // 建立WebSocket连接
     // 根据当前域名构建WebSocket URL
     const hostname = window.location.hostname;
     const socketUrl = hostname === 'ylsf.chat'
-      ? 'http://ylsf.chat:5100'  // 直接连接到后端服务端口
+      ? 'http://ylsf.chat:1020'  // 通过nginx代理连接（需要配置WebSocket代理）
       : 'http://localhost:5100'; // 本地开发环境
 
     console.log('连接WebSocket:', socketUrl);
 
     setConnectionStatus('connecting');
     const newSocket = io(socketUrl, {
-      path: '/socket.io', // 使用默认路径
+      path: hostname === 'ylsf.chat' ? '/iot/socket.io' : '/socket.io',
       transports: ['websocket', 'polling'],
       timeout: 10000,
       forceNew: true,
@@ -798,7 +847,10 @@ ${report.ai_analysis.recommendations.map((rec: string) => `• ${rec}`).join('\n
               </div>
               <div className="flex space-x-3">
                 <button
-                  onClick={() => fetchRealTimeData(true)}
+                  onClick={() => {
+                    fetchRealTimeData(true);
+                    fetchDeformationData(true);
+                  }}
                   disabled={loading}
                   className="px-4 py-2 bg-slate-700 text-slate-200 text-sm border border-slate-600 rounded-lg hover:bg-slate-600 disabled:opacity-50 transition-colors"
                 >
@@ -981,7 +1033,10 @@ ${report.ai_analysis.recommendations.map((rec: string) => `• ${rec}`).join('\n
                     <div className="text-sm text-slate-400 mb-3">快速操作</div>
                     <div className="space-y-2">
                       <button
-                        onClick={() => fetchRealTimeData(true)}
+                        onClick={() => {
+                          fetchRealTimeData(true);
+                          fetchDeformationData(true);
+                        }}
                         disabled={loading}
                         className="w-full px-3 py-2 text-xs bg-cyan-500/20 text-cyan-300 border border-cyan-400 rounded hover:bg-cyan-500/30 disabled:opacity-50 transition-colors"
                       >
@@ -1119,9 +1174,23 @@ ${report.ai_analysis.recommendations.map((rec: string) => `• ${rec}`).join('\n
               <div className="px-4 py-3 bg-slate-700/50 border-b border-slate-600">
                 <h3 className="text-sm font-semibold text-cyan-300 flex items-center space-x-2">
                   <span>GPS形变分析</span>
+                  {deformationData.loading && (
+                    <div className="w-3 h-3 border border-cyan-300 border-t-transparent rounded-full animate-spin"></div>
+                  )}
                 </h3>
               </div>
               <div className="p-4 space-y-4 overflow-y-auto">
+                {deformationData.error && (
+                  <div className="bg-red-500/20 border border-red-400 rounded-lg p-3 text-center">
+                    <div className="text-sm text-red-300">{deformationData.error}</div>
+                    <button
+                      onClick={() => fetchDeformationData(true)}
+                      className="mt-2 px-3 py-1 text-xs bg-red-500/30 text-red-200 rounded hover:bg-red-500/40 transition-colors"
+                    >
+                      重试
+                    </button>
+                  </div>
+                )}
                 {/* 3D总位移距离 */}
                 <div className="bg-slate-700/30 rounded-lg p-3">
                   <div className="flex justify-between items-center mb-2">
@@ -1182,26 +1251,34 @@ ${report.ai_analysis.recommendations.map((rec: string) => `• ${rec}`).join('\n
                   </div>
                 </div>
 
-                {/* 形变风险等级 */}
+                {/* 形变风险等级 - 国标四级预警体系 */}
                 <div className="bg-slate-700/30 rounded-lg p-3">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-xs text-slate-400">风险等级</span>
-                    <span className="text-xs text-green-400">安全</span>
+                    <span className={`text-xs font-medium ${
+                      deformationData.deformation_risk_level === 0 ? 'text-green-400' :
+                      deformationData.deformation_risk_level === 4 ? 'text-blue-400' :
+                      deformationData.deformation_risk_level === 3 ? 'text-yellow-400' :
+                      deformationData.deformation_risk_level === 2 ? 'text-orange-400' :
+                      deformationData.deformation_risk_level === 1 ? 'text-red-400' : 'text-gray-400'
+                    }`}>
+                      {deformationData.deformation_risk_level === 0 ? '正常' :
+                       deformationData.deformation_risk_level === 4 ? 'IV级蓝色' :
+                       deformationData.deformation_risk_level === 3 ? 'III级黄色' :
+                       deformationData.deformation_risk_level === 2 ? 'II级橙色' :
+                       deformationData.deformation_risk_level === 1 ? 'I级红色' : '未知'}
+                    </span>
                   </div>
                   <div className="flex items-center space-x-1">
-                    {[0, 1, 2, 3, 4].map(level => (
-                      <div
-                        key={level}
-                        className={`w-3 h-3 rounded-full ${
-                          level <= deformationData.deformation_risk_level
-                            ? level <= 1 ? 'bg-green-400' : level <= 2 ? 'bg-yellow-400' : 'bg-red-400'
-                            : 'bg-slate-600'
-                        }`}
-                      />
-                    ))}
+                    {/* 国标四级预警指示器 */}
+                    <div className={`w-3 h-3 rounded-full ${deformationData.deformation_risk_level === 0 ? 'bg-green-400' : 'bg-slate-600'}`} title="正常"></div>
+                    <div className={`w-3 h-3 rounded-full ${deformationData.deformation_risk_level === 4 ? 'bg-blue-400' : 'bg-slate-600'}`} title="IV级蓝色"></div>
+                    <div className={`w-3 h-3 rounded-full ${deformationData.deformation_risk_level === 3 ? 'bg-yellow-400' : 'bg-slate-600'}`} title="III级黄色"></div>
+                    <div className={`w-3 h-3 rounded-full ${deformationData.deformation_risk_level === 2 ? 'bg-orange-400' : 'bg-slate-600'}`} title="II级橙色"></div>
+                    <div className={`w-3 h-3 rounded-full ${deformationData.deformation_risk_level === 1 ? 'bg-red-400' : 'bg-slate-600'}`} title="I级红色"></div>
                   </div>
                   <div className="text-xs text-slate-400 mt-1">
-                    当前风险等级: {deformationData.deformation_risk_level}
+                    国标GB/T 38509-2020四级预警体系
                   </div>
                 </div>
 
@@ -1295,12 +1372,18 @@ ${report.ai_analysis.recommendations.map((rec: string) => `• ${rec}`).join('\n
                     <span className="text-xs text-slate-400">当前形变</span>
                     <span className={`text-xs ${
                       deformationData.deformation_type === 0 ? 'text-green-400' :
-                      deformationData.deformation_risk_level <= 1 ? 'text-green-400' :
-                      deformationData.deformation_risk_level <= 2 ? 'text-yellow-400' : 'text-red-400'
+                      deformationData.deformation_risk_level === 0 ? 'text-green-400' :
+                      deformationData.deformation_risk_level === 4 ? 'text-blue-400' :
+                      deformationData.deformation_risk_level === 3 ? 'text-yellow-400' :
+                      deformationData.deformation_risk_level === 2 ? 'text-orange-400' :
+                      deformationData.deformation_risk_level === 1 ? 'text-red-400' : 'text-gray-400'
                     }`}>
                       {deformationData.deformation_type === 0 ? '无形变' :
-                       deformationData.deformation_risk_level <= 1 ? '稳定' :
-                       deformationData.deformation_risk_level <= 2 ? '轻微' : '显著'}
+                       deformationData.deformation_risk_level === 0 ? '稳定' :
+                       deformationData.deformation_risk_level === 4 ? '轻微' :
+                       deformationData.deformation_risk_level === 3 ? '中等' :
+                       deformationData.deformation_risk_level === 2 ? '较大' :
+                       deformationData.deformation_risk_level === 1 ? '严重' : '未知'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
@@ -1319,25 +1402,37 @@ ${report.ai_analysis.recommendations.map((rec: string) => `• ${rec}`).join('\n
                   </div>
                 </div>
 
-                {/* 预警状态 */}
+                {/* 预警状态 - 国标四级预警体系 */}
                 <div className="bg-slate-700/30 rounded-lg p-3">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-xs text-slate-400">预警状态</span>
-                    <div className={`w-2 h-2 rounded-full animate-pulse ${
-                      deformationData.deformation_risk_level <= 1 ? 'bg-green-400' :
-                      deformationData.deformation_risk_level <= 2 ? 'bg-yellow-400' : 'bg-red-400'
+                    <div className={`w-2 h-2 rounded-full ${
+                      deformationData.deformation_risk_level === 0 ? 'bg-green-400' :
+                      deformationData.deformation_risk_level === 4 ? 'bg-blue-400 animate-pulse' :
+                      deformationData.deformation_risk_level === 3 ? 'bg-yellow-400 animate-pulse' :
+                      deformationData.deformation_risk_level === 2 ? 'bg-orange-400 animate-pulse' :
+                      deformationData.deformation_risk_level === 1 ? 'bg-red-400 animate-pulse' : 'bg-gray-400'
                     }`}></div>
                   </div>
                   <div className={`text-sm font-medium ${
-                    deformationData.deformation_risk_level <= 1 ? 'text-green-400' :
-                    deformationData.deformation_risk_level <= 2 ? 'text-yellow-400' : 'text-red-400'
+                    deformationData.deformation_risk_level === 0 ? 'text-green-400' :
+                    deformationData.deformation_risk_level === 4 ? 'text-blue-400' :
+                    deformationData.deformation_risk_level === 3 ? 'text-yellow-400' :
+                    deformationData.deformation_risk_level === 2 ? 'text-orange-400' :
+                    deformationData.deformation_risk_level === 1 ? 'text-red-400' : 'text-gray-400'
                   }`}>
-                    {deformationData.deformation_risk_level <= 1 ? '正常监测' :
-                     deformationData.deformation_risk_level <= 2 ? '注意观察' : '预警状态'}
+                    {deformationData.deformation_risk_level === 0 ? '正常监测' :
+                     deformationData.deformation_risk_level === 4 ? 'IV级蓝色预警' :
+                     deformationData.deformation_risk_level === 3 ? 'III级黄色预警' :
+                     deformationData.deformation_risk_level === 2 ? 'II级橙色预警' :
+                     deformationData.deformation_risk_level === 1 ? 'I级红色预警' : '状态未知'}
                   </div>
                   <div className="text-xs text-slate-400 mt-1">
-                    {deformationData.deformation_risk_level <= 1 ? '未触发预警阈值' :
-                     deformationData.deformation_risk_level <= 2 ? '接近预警阈值' : '已触发预警阈值'}
+                    {deformationData.deformation_risk_level === 0 ? '未达到预警标准' :
+                     deformationData.deformation_risk_level === 4 ? '风险一般，可能性较小' :
+                     deformationData.deformation_risk_level === 3 ? '风险较高，有一定可能性' :
+                     deformationData.deformation_risk_level === 2 ? '风险高，可能性较大' :
+                     deformationData.deformation_risk_level === 1 ? '风险很高，可能性很大' : '状态异常'}
                   </div>
                 </div>
 

@@ -39,6 +39,56 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const deviceId = searchParams.get('device_id') || 'device_1';
+    const limit = parseInt(searchParams.get('limit') || '50');
+    const dataOnly = searchParams.get('data_only') === 'true';
+
+    console.log('设备管理API请求:', { deviceId, limit, dataOnly });
+
+    // 如果只需要GPS数据列表，直接返回
+    if (dataOnly) {
+      const { data: gpsDataList, error: gpsError } = await supabase
+        .from('iot_data')
+        .select(`
+          id,
+          device_id,
+          event_time,
+          latitude,
+          longitude,
+          deformation_distance_3d,
+          deformation_horizontal,
+          deformation_vertical,
+          deformation_velocity,
+          deformation_confidence,
+          risk_level,
+          temperature,
+          humidity,
+          illumination,
+          vibration,
+          baseline_established
+        `)
+        .eq('device_id', deviceId)
+        .order('event_time', { ascending: false })
+        .limit(limit);
+
+      if (gpsError) {
+        console.error('获取GPS数据失败:', gpsError);
+        return NextResponse.json({
+          success: false,
+          error: '获取GPS数据失败',
+          details: gpsError.message
+        }, { status: 500 });
+      }
+
+      console.log(`获取到${gpsDataList?.length || 0}条GPS数据`);
+
+      return NextResponse.json({
+        success: true,
+        data: gpsDataList || [],
+        count: gpsDataList?.length || 0,
+        deviceId: deviceId,
+        timestamp: new Date().toISOString()
+      });
+    }
 
     // 1. 获取设备基本信息（从设备映射表或配置）
     const deviceConfig = {

@@ -8,6 +8,7 @@ import {
   SettingOutlined,
   BarChartOutlined,
   DesktopOutlined,
+  EnvironmentOutlined,
 } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 
@@ -53,6 +54,7 @@ const HoverSidebar = () => {
             if (key === 'home') router.push('/');
             if (key === 'analysis') router.push('/analysis');
             if (key === 'device-management') router.push('/device-management');
+            if (key === 'gps-monitoring') router.push('/gps-monitoring');
             if (key === 'settings') router.push('/settings');
           }}
           items={[
@@ -70,6 +72,11 @@ const HoverSidebar = () => {
               key: 'device-management',
               icon: <DesktopOutlined />,
               label: '设备管理',
+            },
+            {
+              key: 'gps-monitoring',
+              icon: <EnvironmentOutlined />,
+              label: 'GPS形变监测',
             },
             {
               key: 'settings',

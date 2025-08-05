@@ -14,9 +14,9 @@ let Server, io;
 try {
   const socketIO = require('socket.io');
   Server = socketIO.Server;
-  console.log('Socket.IO 加载成功');
+  console.log('✅ Socket.IO 加载成功');
 } catch (error) {
-  console.log('Socket.IO 未安装，将使用轮询模式');
+  console.log('❌ Socket.IO 未安装，将使用轮询模式');
   console.log('请运行: npm install socket.io');
   Server = null;
 }
@@ -25,6 +25,7 @@ const { createClient } = require('@supabase/supabase-js');
 const DataProcessor = require('./data-processor');
 const DeviceMapper = require('./device-mapper');
 const HuaweiIoTService = require('./huawei-iot-service');
+const GPSDeformationService = require('./gps-deformation-service');
 
 const app = express();
 const server = http.createServer(app);
@@ -37,9 +38,9 @@ if (Server) {
       methods: ["GET", "POST"]
     }
   });
-  console.log('WebSocket服务器初始化成功');
+  console.log('✅ WebSocket服务器初始化成功');
 } else {
-  console.log('WebSocket服务器未初始化（Socket.IO未安装）');
+  console.log('⚠️  WebSocket服务器未初始化（Socket.IO未安装）');
 }
 
 const PORT = 5100;
@@ -156,13 +157,13 @@ async function checkDatabaseForRecentData(deviceId) {
     const maxOfflineTime = 60 * 1000; // 1分钟
     const hasRecentData = timeDiff < maxOfflineTime;
 
-    console.log(`设备 ${deviceId} 数据库数据检查:`, {
-      lastDataTime: latestRecord.event_time,
-      timeDiff: Math.round(timeDiff / 1000) + '秒前',
-      hasRecentData,
-      temperature: latestRecord.temperature,
-      humidity: latestRecord.humidity
-    });
+    // console.log(`设备 ${deviceId} 数据库数据检查:`, {
+    //   lastDataTime: latestRecord.event_time,
+    //   timeDiff: Math.round(timeDiff / 1000) + '秒前',
+    //   hasRecentData,
+    //   temperature: latestRecord.temperature,
+    //   humidity: latestRecord.humidity
+    // });
 
     return {
       hasRecentData,
@@ -205,6 +206,12 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const deviceMapper = new DeviceMapper();
 const dataProcessor = new DataProcessor();
 
+// 初始化GPS形变分析服务
+const gpsDeformationService = new GPSDeformationService();
+
+// 导入基准点管理API路由
+const baselineManagementAPI = require('./baseline-management-api');
+
 // 使用环境变量或默认配置
 const huaweiIoTService = new HuaweiIoTService({
   iamEndpoint: process.env.HUAWEI_IAM_ENDPOINT || 'https://iam.myhuaweicloud.com',
@@ -242,6 +249,14 @@ app.get('/info', (req, res) => {
       device_mappings: 'GET /devices/mappings',
       device_list: 'GET /devices/list',
       device_info: 'GET /devices/info/:simpleId',
+      gps_deformation_analysis: 'POST /api/gps-deformation/:deviceId',
+      gps_deformation_history: 'GET /api/gps-deformation/:deviceId',
+      baselines_list: 'GET /api/baselines',
+      baseline_by_device: 'GET /api/baselines/:deviceId',
+      baseline_create: 'POST /api/baselines/:deviceId',
+      baseline_auto_establish: 'POST /api/baselines/:deviceId/auto-establish',
+      baseline_quality_check: 'GET /api/baselines/:deviceId/quality-check',
+      baseline_delete: 'DELETE /api/baselines/:deviceId',
       huawei_config: 'GET /huawei/config',
       device_shadow: 'GET /huawei/devices/:deviceId/shadow',
       send_command: 'POST /huawei/devices/:deviceId/commands',
@@ -362,6 +377,68 @@ app.get('/devices/info/:simpleId', async (req, res) => {
     res.status(500).json({
       success: false,
       error: '获取设备信息失败',
+      message: error.message
+    });
+  }
+});
+
+// GPS形变分析API路由
+app.post('/api/gps-deformation/:deviceId', async (req, res) => {
+  try {
+    const { deviceId } = req.params;
+    const options = req.body || {};
+
+    console.log(`🔍 GPS形变分析请求 - 设备: ${deviceId}`);
+
+    // 调用GPS形变分析服务
+    const analysisResult = await gpsDeformationService.performComprehensiveAnalysis(deviceId, options);
+
+    res.json({
+      success: true,
+      deviceId: deviceId,
+      timestamp: new Date().toISOString(),
+      ...analysisResult
+    });
+
+  } catch (error) {
+    console.error('GPS形变分析失败:', error);
+    res.status(500).json({
+      success: false,
+      error: 'GPS形变分析失败',
+      message: error.message,
+      deviceId: req.params.deviceId
+    });
+  }
+});
+
+// 注册基准点管理API路由
+app.use('/api/baselines', baselineManagementAPI);
+
+// 注册设备管理形变分析API路由
+const deviceManagementDeformationAPI = require('./device-management-deformation-api');
+app.use('/api/device-management/deformation', deviceManagementDeformationAPI);
+
+// 获取GPS形变分析历史结果
+app.get('/api/gps-deformation/:deviceId', async (req, res) => {
+  try {
+    const { deviceId } = req.params;
+
+    console.log(`📈 获取GPS形变历史 - 设备: ${deviceId}`);
+
+    // 这里可以实现获取历史分析结果的逻辑
+    // 暂时返回基本信息
+    res.json({
+      success: true,
+      deviceId: deviceId,
+      message: '历史分析数据功能开发中',
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('获取GPS形变历史失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '获取历史数据失败',
       message: error.message
     });
   }
@@ -1228,13 +1305,13 @@ async function sendDeviceData(deviceId) {
             const maxOfflineTime = 60 * 1000; // 1分钟
             const isDataFresh = timeDiff < maxOfflineTime;
 
-            console.log(`设备 ${deviceId} 华为云IoT数据检查:`, {
-              originalTime: lastUpdateTime,
-              parsedTime: lastUpdate.toISOString(),
-              timeDiff: Math.round(timeDiff / 1000) + '秒前',
-              isDataFresh,
-              uptime: properties.uptime
-            });
+            // console.log(`设备 ${deviceId} 华为云IoT数据检查:`, {
+            //   originalTime: lastUpdateTime,
+            //   parsedTime: lastUpdate.toISOString(),
+            //   timeDiff: Math.round(timeDiff / 1000) + '秒前',
+            //   isDataFresh,
+            //   uptime: properties.uptime
+            // });
 
             iotStatus = {
               status: isDataFresh ? 'online' : 'offline',
@@ -1253,12 +1330,12 @@ async function sendDeviceData(deviceId) {
     const finalStatus = dbCheck.hasRecentData ? 'online' :
                        (iotStatus.status === 'online' ? 'online' : 'offline');
 
-    console.log(`设备 ${deviceId} 最终状态判断:`, {
-      databaseStatus: dbCheck.hasRecentData ? 'online' : 'offline',
-      iotStatus: iotStatus.status,
-      finalStatus,
-      primarySource: dbCheck.hasRecentData ? 'database' : 'huawei_iot'
-    });
+    // console.log(`设备 ${deviceId} 最终状态判断:`, {
+    //   databaseStatus: dbCheck.hasRecentData ? 'online' : 'offline',
+    //   iotStatus: iotStatus.status,
+    //   finalStatus,
+    //   primarySource: dbCheck.hasRecentData ? 'database' : 'huawei_iot'
+    // });
 
     // 计算健康度和电池电量
     let healthScore = 0;
@@ -1311,9 +1388,9 @@ if (io) {
   setInterval(() => {
     sendDeviceData('device_1');
   }, 500);
-  console.log('WebSocket实时数据推送已启动（每500毫秒）');
+  console.log(' WebSocket实时数据推送已启动（每500毫秒）');
 } else {
-  console.log('WebSocket实时数据推送未启动（Socket.IO不可用）');
+  console.log(' WebSocket实时数据推送未启动（Socket.IO不可用）');
 }
 
 // 启动服务器

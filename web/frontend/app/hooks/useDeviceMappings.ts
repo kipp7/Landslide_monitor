@@ -28,7 +28,11 @@ export default function useDeviceMappings() {
 
   const fetchMappings = async () => {
     try {
-      const response = await fetch('http://localhost:5100/devices/mappings');
+      // 使用环境变量或相对路径，支持服务器部署
+      const apiBase = process.env.NEXT_PUBLIC_IOT_API_BASE ||
+                     (typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host}` : '') +
+                     '/iot';
+      const response = await fetch(`${apiBase}/devices/mappings`);
       const result = await response.json();
 
       if (result.success) {
@@ -179,7 +183,11 @@ export default function useDeviceMappings() {
    */
   const getDeviceDetails = async (simpleId: string) => {
     try {
-      const response = await fetch(`http://localhost:5100/devices/${simpleId}`);
+      // 使用环境变量或相对路径，支持服务器部署
+      const apiBase = process.env.NEXT_PUBLIC_IOT_API_BASE ||
+                     (typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host}` : '') +
+                     '/iot';
+      const response = await fetch(`${apiBase}/devices/${simpleId}`);
       const result = await response.json();
       
       if (result.success) {
