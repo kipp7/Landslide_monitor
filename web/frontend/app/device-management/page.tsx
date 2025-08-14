@@ -39,7 +39,7 @@ import HoverSidebar from '../components/HoverSidebar';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { getApiUrl, API_CONFIG } from '../../lib/config';
-import { io, Socket } from 'socket.io-client';
+import { supabase } from '../../lib/supabaseClient';
 
 // 客户端时间组件，避免SSR水合错误
 const CurrentTime = () => {
@@ -66,8 +66,6 @@ const CurrentTime = () => {
 
   return <span>{currentTime}</span>;
 };
-
-
 
 // 使用大屏的地图组件
 const MapContainer = dynamic(() => import('../../app/components/MapContainer'), {
@@ -109,9 +107,7 @@ export default function DeviceManagementPage() {
   const [loading, setLoading] = useState(false);
   const [realTimeData, setRealTimeData] = useState<any>(null);
   const [lastUpdateTime, setLastUpdateTime] = useState<string>('');
-  const [isRealTimeActive, setIsRealTimeActive] = useState(true);
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
+
   const [form] = Form.useForm();
 
   // 设备控制相关状态
@@ -119,18 +115,131 @@ export default function DeviceManagementPage() {
   const [commandModalVisible, setCommandModalVisible] = useState(false);
   const [commandForm] = Form.useForm();
 
-  // 真实设备数据 - 基于实际的device_1
+  // 设备映射信息 - 用于获取真实设备名称
+  const [deviceMappings, setDeviceMappings] = useState<any[]>([]);
+
+  // 获取设备映射信息
+  useEffect(() => {
+    const fetchDeviceMappings = async () => {
+      try {
+        const { data: mappings, error } = await supabase
+          .from('device_mapping')
+          .select('simple_id, device_name, location_name');
+
+        if (!error && mappings) {
+          setDeviceMappings(mappings);
+        }
+      } catch (error) {
+        console.error('获取设备映射失败:', error);
+      }
+    };
+
+    fetchDeviceMappings();
+  }, []);
+
+  // 实时传感器数据 - 使用与大屏页面相同的数据源
+  const [sensorData, setSensorData] = useState<any[]>([]);
+  const [sensorLoading, setSensorLoading] = useState(true);
+
+  // 获取实时传感器数据
+  const fetchSensorData = useCallback(async () => {
+    try {
+      setSensorLoading(true);
+      const { data, error } = await supabase
+        .from('iot_data')
+        .select('*')
+        .order('event_time', { ascending: false })
+        .limit(500);
+
+      if (error) {
+        console.error('获取传感器数据失败:', error);
+      } else {
+        setSensorData(data || []);
+        setLastUpdateTime(new Date().toLocaleTimeString());
+      }
+    } catch (error) {
+      console.error('获取传感器数据失败:', error);
+    } finally {
+      setSensorLoading(false);
+    }
+  }, []);
+
+  // 初始加载传感器数据
+  useEffect(() => {
+    fetchSensorData();
+    
+    // 设置定时刷新
+    const interval = setInterval(fetchSensorData, 30000); // 30秒刷新一次
+    
+    return () => clearInterval(interval);
+  }, [fetchSensorData]);
+
+  // 从实时传感器数据中提取设备位置信息 - 使用与大屏页面相同的逻辑
+  const getDevicesForMap = useMemo(() => {
+    if (!sensorData || sensorData.length === 0) {
+      console.log('设备管理：没有实时数据，不显示任何监测点');
+      return [];
+    }
+
+    // 按设备ID分组，获取每个设备的最新数据
+    const deviceMap = new Map();
+    sensorData.forEach(record => {
+      if (record.device_id && record.latitude && record.longitude) {
+        const existing = deviceMap.get(record.device_id);
+        if (!existing || new Date(record.event_time) > new Date(existing.event_time)) {
+          deviceMap.set(record.device_id, record);
+        }
+      }
+    });
+
+    // 只使用有真实坐标数据的设备
+    const realDevices = Array.from(deviceMap.values())
+      .filter(record => record.latitude && record.longitude)
+      .map((record, index) => {
+        const lat = parseFloat(record.latitude);
+        const lng = parseFloat(record.longitude);
+
+        // 从设备映射中获取真实的设备名称
+        const mapping = deviceMappings.find(m => m.simple_id === record.device_id);
+        const deviceName = mapping?.device_name || mapping?.location_name || `设备${record.device_id}`;
+
+        return {
+          device_id: record.device_id,
+          name: deviceName,
+          coord: [lng, lat] as [number, number],
+          temp: parseFloat(record.temperature) || 0,
+          hum: parseFloat(record.humidity) || 0,
+          status: 'online' as const, // 有数据说明在线
+          location: mapping?.location_name || '未知位置'
+        };
+      });
+
+    console.log('设备管理：真实监测点数据:', realDevices);
+    return realDevices;
+  }, [sensorData, deviceMappings]);
+
+  // 计算真实数据的地理中心点 - 使用useMemo避免重复计算
+  const mapCenter = useMemo((): [number, number] => {
+    if (getDevicesForMap.length === 0) return [108.3516, 21.6847]; // 默认中心点
+
+    const totalLng = getDevicesForMap.reduce((sum, device) => sum + device.coord[0], 0);
+    const totalLat = getDevicesForMap.reduce((sum, device) => sum + device.coord[1], 0);
+
+    return [totalLng / getDevicesForMap.length, totalLat / getDevicesForMap.length];
+  }, [getDevicesForMap]);
+
+  // 真实设备数据 - 基于实际的传感器数据
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo>({
     device_id: 'device_1',
     real_name: '6815a14f9314d118511807c6_rk2206',
     display_name: '龙门滑坡监测站',
     status: 'offline', // 默认离线，等API返回真实状态
     last_active: new Date().toISOString(),
-    location: '防城港华石镇龙门村',
+    location: '南京集训基地',
     coordinates: { lat: 21.6847, lng: 108.3516 },
     device_type: '软通套件',
     firmware_version: 'v2.1.3',
-    install_date: '2025-06-01',
+    install_date: '2025-07-07',
     data_count_today: 0,
     last_data_time: new Date().toISOString(),
     health_score: 0,
@@ -139,6 +248,29 @@ export default function DeviceManagementPage() {
     battery_level: 0,
     signal_strength: 0
   });
+
+  // 更新设备信息 - 基于实时传感器数据
+  useEffect(() => {
+    if (getDevicesForMap.length > 0) {
+      const latestDevice = getDevicesForMap[0]; // 获取最新的设备数据
+      
+      setDeviceInfo(prev => ({
+        ...prev,
+        status: 'online',
+        last_active: new Date().toISOString(),
+        coordinates: { 
+          lat: latestDevice.coord[1], 
+          lng: latestDevice.coord[0] 
+        },
+        temperature: latestDevice.temp,
+        humidity: latestDevice.hum,
+        data_count_today: sensorData.length,
+        last_data_time: new Date().toISOString(),
+        health_score: 100, // 有数据说明健康
+        signal_strength: 95 // 有数据说明信号好
+      }));
+    }
+  }, [getDevicesForMap, sensorData.length]);
 
   // GPS形变分析数据状态
   const [deformationData, setDeformationData] = useState({
@@ -306,85 +438,6 @@ export default function DeviceManagementPage() {
       }
     }
   }, [deviceInfo.device_id]);
-
-  // WebSocket连接管理
-  useEffect(() => {
-    if (typeof window === 'undefined') return; // 确保在客户端运行
-
-    // 初始加载数据
-    fetchRealTimeData(true);
-    // 初始加载形变分析数据
-    fetchDeformationData(false);
-
-    // 建立WebSocket连接
-    // 根据当前域名构建WebSocket URL
-    const hostname = window.location.hostname;
-    const socketUrl = hostname === 'ylsf.chat'
-      ? 'http://ylsf.chat:1020'  // 通过nginx代理连接（需要配置WebSocket代理）
-      : 'http://localhost:5100'; // 本地开发环境
-
-    console.log('连接WebSocket:', socketUrl);
-
-    setConnectionStatus('connecting');
-    const newSocket = io(socketUrl, {
-      path: hostname === 'ylsf.chat' ? '/iot/socket.io' : '/socket.io',
-      transports: ['websocket', 'polling'],
-      timeout: 10000,
-      forceNew: true,
-    });
-
-    // 连接成功
-    newSocket.on('connect', () => {
-      console.log('WebSocket连接成功');
-      setConnectionStatus('connected');
-      // 订阅设备实时数据
-      newSocket.emit('subscribe_device', 'device_1');
-    });
-
-    // 接收实时设备数据
-    newSocket.on('device_data', (data) => {
-      console.log('收到实时设备数据:', data);
-      setDeviceInfo(data);
-      setLastUpdateTime(new Date().toLocaleTimeString());
-    });
-
-    // 连接断开
-    newSocket.on('disconnect', () => {
-      console.log('WebSocket连接断开');
-      setConnectionStatus('disconnected');
-    });
-
-    // 连接错误
-    newSocket.on('connect_error', (error) => {
-      console.error('WebSocket连接错误:', error);
-      setConnectionStatus('disconnected');
-    });
-
-    setSocket(newSocket);
-
-    // 清理函数
-    return () => {
-      if (newSocket) {
-        newSocket.emit('unsubscribe_device', 'device_1');
-        newSocket.disconnect();
-      }
-    };
-  }, []);
-
-  // 实时状态切换
-  const toggleRealTime = useCallback(() => {
-    if (socket) {
-      if (isRealTimeActive) {
-        // 暂停：取消订阅
-        socket.emit('unsubscribe_device', 'device_1');
-        setIsRealTimeActive(false);
-      } else {
-        // 启动：重新订阅
-        socket.emit('subscribe_device', 'device_1');
-        setIsRealTimeActive(true);
-      }
-    }
-  }, [socket, isRealTimeActive]);
 
   // 数据导出处理
   const handleExportData = useCallback(async (exportType: 'today' | 'history') => {
@@ -789,28 +842,21 @@ ${report.ai_analysis.recommendations.map((rec: string) => `• ${rec}`).join('\n
                 </span>
               </div>
 
-              {/* WebSocket实时连接状态指示器 */}
+              {/* 传感器数据实时状态指示器 */}
               <div className="flex items-center space-x-2 bg-blue-700/50 px-3 py-1 rounded-full">
                 <div className={`w-2 h-2 rounded-full ${
-                  connectionStatus === 'connected' && isRealTimeActive ? 'bg-green-400 animate-pulse' :
-                  connectionStatus === 'connecting' ? 'bg-yellow-400 animate-pulse' :
-                  connectionStatus === 'connected' && !isRealTimeActive ? 'bg-blue-400' :
+                  !sensorLoading && sensorData.length > 0 ? 'bg-green-400 animate-pulse' :
+                  sensorLoading ? 'bg-yellow-400 animate-pulse' :
                   'bg-red-400'
                 }`}></div>
                 <span className="text-sm text-slate-200">
-                  {connectionStatus === 'connected' && isRealTimeActive ? 'WebSocket实时' :
-                   connectionStatus === 'connecting' ? '连接中...' :
-                   connectionStatus === 'connected' && !isRealTimeActive ? '已暂停' :
-                   'WebSocket断开'}
+                  {!sensorLoading && sensorData.length > 0 ? '传感器实时' :
+                   sensorLoading ? '加载中...' :
+                   '无数据'}
                 </span>
-                {connectionStatus === 'connected' && (
-                  <button
-                    onClick={toggleRealTime}
-                    className="text-xs text-blue-300 hover:text-blue-200 ml-1"
-                  >
-                    {isRealTimeActive ? '暂停' : '启动'}
-                  </button>
-                )}
+                <div className="text-xs text-blue-300 ml-1">
+                  {sensorData.length}条数据
+                </div>
               </div>
 
               <div className="text-sm text-slate-300 font-mono">
@@ -1137,28 +1183,36 @@ ${report.ai_analysis.recommendations.map((rec: string) => `• ${rec}`).join('\n
                 {/* 地图区域 - 占据全部可用空间 */}
                 <div className="flex-1 rounded-lg overflow-hidden">
                   {(() => {
+                    // 使用实时传感器数据，如果没有数据则显示提示
+                    if (getDevicesForMap.length === 0) {
+                      return (
+                        <div className="flex items-center justify-center h-full bg-gray-50 rounded-lg">
+                          <div className="text-center text-gray-500">
+                            <div className="text-lg font-medium mb-2">暂无监测点数据</div>
+                            <div className="text-sm">等待传感器数据上传中...</div>
+                            {sensorLoading && (
+                              <div className="mt-2">
+                                <Spin size="small" />
+                                <span className="ml-2 text-xs">加载中...</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+
                     const mapProps = {
                       mode: "2D" as const,
-                      devices: [{
-                        device_id: deviceInfo.device_id,
-                        name: deviceInfo.display_name,
-                        coord: [deviceInfo.coordinates.lng, deviceInfo.coordinates.lat] as [number, number],
-                        temp: parseFloat(deviceInfo.temperature.toString()),
-                        hum: parseFloat(deviceInfo.humidity.toString()),
-                        status: deviceInfo.status
-                      }],
-                      center: [deviceInfo.coordinates.lng, deviceInfo.coordinates.lat] as [number, number],
-                      zoom: 15
+                      devices: getDevicesForMap, // ✅ 使用实时传感器数据
+                      center: mapCenter, // ✅ 使用动态计算的中心点
+                      zoom: 16
                     };
 
-                    console.log('传递给地图的数据:', {
-                      deviceInfo: {
-                        device_id: deviceInfo.device_id,
-                        display_name: deviceInfo.display_name,
-                        coordinates: deviceInfo.coordinates,
-                        status: deviceInfo.status
-                      },
-                      mapProps
+                    console.log('传递给地图的实时数据:', {
+                      realTimeDevices: getDevicesForMap,
+                      mapCenter,
+                      sensorDataCount: sensorData.length,
+                      lastUpdate: lastUpdateTime
                     });
 
                     return <MapContainer {...mapProps} />;
@@ -1567,7 +1621,7 @@ ${report.ai_analysis.recommendations.map((rec: string) => `• ${rec}`).join('\n
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">海拔高度</span>
-                  <span className="text-white">约 125m</span>
+                  <span className="text-white">约 10m</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">地理区域</span>
@@ -1663,11 +1717,11 @@ ${report.ai_analysis.recommendations.map((rec: string) => `• ${rec}`).join('\n
                   <div className="space-y-1 text-xs">
                     <div className="flex justify-between">
                       <span className="text-slate-500">上次维护</span>
-                      <span className="text-slate-300">2024-12-15</span>
+                      <span className="text-slate-300">2025-08-12</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-500">下次维护</span>
-                      <span className="text-yellow-300">2025-03-15</span>
+                      <span className="text-yellow-300">2025-08-17</span>
                     </div>
                   </div>
                 </div>
@@ -1835,7 +1889,7 @@ ${report.ai_analysis.recommendations.map((rec: string) => `• ${rec}`).join('\n
                 name="display_name"
                 rules={[{ required: true, message: '请输入显示名称' }]}
               >
-                <Input placeholder="例如：龙门滑坡监测站" className="bg-slate-700 text-white border-slate-600 placeholder-slate-400" />
+                <Input placeholder="例如：南京滑坡监测站" className="bg-slate-700 text-white border-slate-600 placeholder-slate-400" />
               </Form.Item>
 
               <Form.Item
@@ -1843,7 +1897,7 @@ ${report.ai_analysis.recommendations.map((rec: string) => `• ${rec}`).join('\n
                 name="location"
                 rules={[{ required: true, message: '请输入安装位置' }]}
               >
-                <Input placeholder="例如：防城港华石镇龙门村" className="bg-slate-700 text-white border-slate-600 placeholder-slate-400" />
+                <Input placeholder="例如：南京集成集训基地" className="bg-slate-700 text-white border-slate-600 placeholder-slate-400" />
               </Form.Item>
 
               <Row gutter={16}>
